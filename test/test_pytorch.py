@@ -1,0 +1,77 @@
+"""Tests for ``blockies/pytorch.py``."""
+
+from pathlib import Path
+
+import numpy as np
+import torch
+from torch.utils.data import DataLoader
+
+import blockies
+import blockies.pytorch
+
+
+def test_pytorch_dataloader(tmp_path: Path):
+    """Tests if dataset can load the rendered images."""
+    print("test temp dir: ", tmp_path)
+    np.random.seed(242)
+
+    sampler = blockies.BlockySampler()
+    sampled_params = [sampler.sample() for _ in range(2)]
+
+    (tmp_path / 'train').mkdir()
+
+    for _ in blockies.render(
+        sampled_params,
+        n_processes=1,
+        output_dir=str(tmp_path / 'train'),
+    ):
+        pass
+
+    dataset = blockies.pytorch.Blockies(str(tmp_path), split='train')
+
+    df = dataset.get_dataframe()
+    assert df.obj_name[0] == sampled_params[0].obj_name
+    assert df.obj_name[1] == sampled_params[1].obj_name
+    assert "resolution" not in set(df.keys())
+
+    df = dataset.get_dataframe(to_dict=blockies.pytorch.all_attributes)
+    assert df.attribute_status_obj_name[0] == "sampled"
+    assert df.attribute_status_obj_name[1] == "sampled"
+
+    # check dataset shapes
+    assert len(dataset) == 2
+    img, mask, labels = dataset[0]
+    assert img.shape == (3, 256, 256)
+    assert mask.shape == (1, 256, 256)
+    assert labels.shape == (1,)
+
+    assert type(img) is torch.Tensor
+    assert type(mask) is torch.Tensor
+    assert type(labels) is torch.Tensor
+
+    # check dataset loader
+    dataloader = DataLoader(dataset, batch_size=2)
+    imgs, masks, labels = next(iter(dataloader))
+
+    assert type(imgs) is torch.Tensor
+    assert type(masks) is torch.Tensor
+    assert type(labels) is torch.Tensor
+
+    assert imgs.shape == (2, 3, 256, 256)
+    assert masks.shape == (2, 1, 256, 256)
+    assert labels.shape == (2, 1,)
+
+    dataset.set_return_attributes([
+        'obj_name', 'bending', 'bg_color', 'main_spherical'])
+
+    label_names = dataset.get_label_names()
+    expected_label_names = [
+        'obj_name',
+        'bending',
+        'bg_color',
+        'main_spherical',
+    ]
+    assert label_names == expected_label_names
+
+    img, mask, labels = dataset[0]
+    assert labels.shape == (len(expected_label_names),)

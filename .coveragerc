@@ -1,0 +1,5 @@
+[run]
+include=blockies/*
+
+# omitted as it is barely covered because of ``coverage.process_startup()``.
+omit=blockies/_blender/render_samples.py

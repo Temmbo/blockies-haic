@@ -1,0 +1,54 @@
+[project]
+name = "blockies"
+description = "A synthetic dataset generator for diagnostic decision-making tasks designed for evaluating XAI-based decision support."
+readme = "README.md"
+license = "MIT"
+authors = [
+    {name = "David S. Johnson", email = "djohnson@techfak.de"}
+]
+maintainers = [
+    {name = "David S. Johnson", email = "djohnson@techfak.de"}
+]
+version = "0.1.0"
+requires-python = ">=3.11"
+classifiers=[
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS :: MacOS X",
+]
+
+dependencies = [
+    "imageio>=2.37.3",
+    "matplotlib>=3.10.9",
+    "numpy>=2.4.4",
+    "pandas>=3.0.2",
+    "scipy>=1.17.1",
+    "toml>=0.10.2",
+    "tqdm>=4.67.3",
+]
+
+[project.scripts]
+blockies-generate = "blockies.cli_tool:render_dataset"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["blockies"]
+
+[tool.uv]
+package = true
+
+[dependency-groups]
+dev = [
+    "flake8>=7.3.0",
+    "mypy>=1.20.2",
+    "pdoc>=16.0.0",
+    "pytest>=9.0.3",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.15.12",
+    "torch>=2.11.0",
+    "torchvision>=0.26.0",
+]
