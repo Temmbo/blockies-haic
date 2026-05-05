@@ -18,16 +18,16 @@ def render(
     download_blender: bool = False,
     print_output: bool = False,
     print_cmd: bool = False,
-    save_blender_file: bool = False
+    save_blender_file: bool = False,
 ):
     """Renders 3 images and checks #objects, shapes, and if parameters are returned correctly."""
     healthy = blockies.SceneParameters.default_healthy()
 
     # setting the id ensures a determinisitic filename
-    healthy.id = 'healthy'
+    healthy.id = "healthy"
 
     healthy_bended = healthy.clone()
-    healthy_bended.id = 'healthy_bended'
+    healthy_bended.id = "healthy_bended"
     healthy_bended.bending = 0.25
 
     sampled_params = [
@@ -36,7 +36,7 @@ def render(
     ]
 
     i = 0
-    for (img, mask, param) in blockies.render(
+    for img, mask, param in blockies.render(
         sampled_params,
         n_processes=n_processes,
         chunk_size=chunk_size,
@@ -95,19 +95,19 @@ def test_blender_fliplr(tmp_path: Path):
     param_flip.fliplr = True
 
     print(tmp_path)
-    original_path = tmp_path / 'original'
-    fliplr_path = tmp_path / 'fliplr'
+    original_path = tmp_path / "original"
+    fliplr_path = tmp_path / "fliplr"
     original_path.mkdir()
     fliplr_path.mkdir()
 
     # TODO: Need to fix the render to have consisitent bones that are different
-    for (img_original, mask_original, _) in blockies.render(
+    for img_original, mask_original, _ in blockies.render(
         [param_original],
         output_dir=str(original_path),
     ):
         pass
 
-    for (img_fliplr, mask_fliplr, _) in blockies.render(
+    for img_fliplr, mask_fliplr, _ in blockies.render(
         [param_flip],
         output_dir=str(fliplr_path),
     ):
@@ -130,5 +130,5 @@ def test_blender_download(tmp_path: Path):
         download_blender=True,
         blender_dir=str(tmp_path),
         print_output=True,
-        print_cmd=True
+        print_cmd=True,
     )

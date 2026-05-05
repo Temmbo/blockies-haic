@@ -5,8 +5,8 @@ something from this module.
 """
 
 __pdoc__ = {
-    'scene': False,
-    'render_samples': False,
-    'butils': False,
-    'blender_object': False,
+    "scene": False,
+    "render_samples": False,
+    "butils": False,
+    "blender_object": False,
 }

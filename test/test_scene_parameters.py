@@ -11,6 +11,7 @@ import blockies
 @dataclasses.dataclass
 class MyParameters(blockies.SceneParameters):
     """Class to test subclass of SceneParameters."""
+
     my_field: str = "my very unique value"
 
 

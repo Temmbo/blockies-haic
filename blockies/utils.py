@@ -16,10 +16,10 @@ QUARTER_CIRCLE = (-np.pi / 4, np.pi / 4)
 # HALF_CIRCLE = (-np.pi / 4, np.pi / 4)
 FULL_CIRCLE = (-np.pi, np.pi)
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
-class discrete():
+class discrete:
     """Wrapper around ``scypi.stats.rv_discrete`` to support more than ints.
 
     Attrs:
@@ -27,10 +27,7 @@ class discrete():
         rv_discrete: The ``scypi.stats.rv_discrete`` distributon.
     """
 
-    def __init__(
-            self,
-            value_to_probs: Dict[T, float],
-            **stats_kwargs: Dict[str, Any]):
+    def __init__(self, value_to_probs: Dict[T, float], **stats_kwargs: Dict[str, Any]):
         """A discrete distribution with any values.
 
         Args:
@@ -42,35 +39,28 @@ class discrete():
         value_indicies = list(range(len(self.values)))
         probs = list(value_to_probs.values())
         self.rv_discrete = scipy.stats.rv_discrete(
-            values=[value_indicies, probs], **stats_kwargs)
+            values=[value_indicies, probs], **stats_kwargs
+        )
 
-    def pmf(self,
-            k: Union[T, Sequence[T]],
-            *args: Sequence[Any],
-            **kwargs: Dict[str, Any]
-            ) -> Sequence[float]:
+    def pmf(
+        self, k: Union[T, Sequence[T]], *args: Sequence[Any], **kwargs: Dict[str, Any]
+    ) -> Sequence[float]:
         """Probability mass function."""
         return np.exp(self.logpmf(k, *args, **kwargs))
 
-    def logpmf(self,
-               k: Union[T, Sequence[T]],
-               *args: Sequence[Any],
-               **kwargs: Dict[str, Any]
-               ) -> Sequence[float]:
+    def logpmf(
+        self, k: Union[T, Sequence[T]], *args: Sequence[Any], **kwargs: Dict[str, Any]
+    ) -> Sequence[float]:
         """Log Probability mass function."""
         if supports_iteration(k):
-            return self.rv_discrete.logpmf(
-                [self.values.index(k_item) for k_item in k])      # type: ignore
+            return self.rv_discrete.logpmf([self.values.index(k_item) for k_item in k])
         # a single k
-        elif k in self.values:  # type: ignore
-            return self.rv_discrete.logpmf(self.values.index(k))  # type: ignore
+        elif k in self.values:
+            return self.rv_discrete.logpmf(self.values.index(k))
         else:
-            raise ValueError(f'Neither iterable nor in self.values: {k}')
+            raise ValueError(f"Neither iterable nor in self.values: {k}")
 
-    def rvs(self,
-            *args: Sequence[Any],
-            **kwargs: Dict[str, Any]
-            ) -> T:
+    def rvs(self, *args: Sequence[Any], **kwargs: Dict[str, Any]) -> T:
         """Samples from distribution."""
         return self.values[self.rv_discrete.rvs(*args, **kwargs)]
 
@@ -85,7 +75,9 @@ def numpy_to_python_scalar(x: np.ndarray) -> Union[int, float]:
         raise ValueError(f"Cannot convert {x} to int or float.")
 
 
-def multiple_choice(values: Sequence[str], probs: Sequence[float], size: int) -> callable:
+def multiple_choice(
+    values: Sequence[str], probs: Sequence[float], size: int
+) -> callable:
     """Samples from a discrete distribution.
 
     Args:
@@ -96,11 +88,9 @@ def multiple_choice(values: Sequence[str], probs: Sequence[float], size: int) ->
     return partial(np.random.choice, a=values, p=probs, size=size, replace=False)
 
 
-def truncated_normal(mean: float = 0,
-                     std: float = 1,
-                     lower: float = -3,
-                     upper: float = 3
-                     ) -> scipy.stats.truncnorm:
+def truncated_normal(
+    mean: float = 0, std: float = 1, lower: float = -3, upper: float = 3
+) -> scipy.stats.truncnorm:
     """Wrapper around ``scipy.stats.truncnorm``.
 
     Args:
@@ -110,8 +100,9 @@ def truncated_normal(mean: float = 0,
         upper: upper truncation.
 
     """
-    return scipy.stats.truncnorm((lower - mean) / std, (upper - mean) / std,
-                                 loc=mean, scale=std)
+    return scipy.stats.truncnorm(
+        (lower - mean) / std, (upper - mean) / std, loc=mean, scale=std
+    )
 
 
 def supports_iteration(value: Union[Any, Sequence[Any]]) -> bool:
@@ -126,8 +117,8 @@ def supports_iteration(value: Union[Any, Sequence[Any]]) -> bool:
 
 def split_class(module_dot_class: str) -> Tuple[str, str]:
     """Splits ``"my.module.MyClass"`` into ``("my.module", "MyClass")``."""
-    parts = module_dot_class.split('.')
-    module = '.'.join(parts[:-1])
+    parts = module_dot_class.split(".")
+    module = ".".join(parts[:-1])
     cls_name = parts[-1]
     return module, cls_name
 

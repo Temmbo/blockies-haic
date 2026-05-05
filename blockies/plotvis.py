@@ -33,7 +33,8 @@ def render_grid(
         num_rows = int(math.floor(number_equal_samples / num_cols_per_class))
         num_samples_per_class = int(num_rows * num_cols_per_class)
         healthy_params, ocd_params = scene_parameters.split_healthy_ocd(
-            params, num_samples_per_class)
+            params, num_samples_per_class
+        )
     else:
         max_number_samples = max(len(healthy_params), len(ocd_params))
         num_rows = int(math.ceil(max_number_samples / num_cols_per_class))
@@ -49,25 +50,26 @@ def render_grid(
 
     if label_class_axis:
         ax_title_healthy = ax[0, num_cols_per_class // 2]
-        ax_title_healthy.set_title('Healthy', fontsize=20)
+        ax_title_healthy.set_title("Healthy", fontsize=20)
         ax_title_ocd = ax[0, num_cols_per_class + num_cols_per_class // 2 + 1]
-        ax_title_ocd.set_title('OCD', fontsize=20)
+        ax_title_ocd.set_title("OCD", fontsize=20)
 
     healthy_ax = ax[:, :num_cols_per_class].flatten().tolist()[::-1]
 
     # middle_column = ax[:, num_cols_per_class].flatten().tolist()[::-1]
     ocd_ax = ax[:, num_cols_per_class + middle_column_offset:].flatten().tolist()[::-1]
 
-    for (img, mask, param) in blender.render(
-            params=healthy_params + ocd_params,
-            chunk_size=num_cols_per_class,
-            download_blender=True):  # download_blender is true until #75 is fixed
-        ax1 = healthy_ax.pop() if param.obj_name == 'healthy' else ocd_ax.pop()
-        ax1.axis('off')
-        ax1.set_aspect('equal')
+    for img, mask, param in blender.render(
+        params=healthy_params + ocd_params,
+        chunk_size=num_cols_per_class,
+        download_blender=True,
+    ):  # download_blender is true until #75 is fixed
+        ax1 = healthy_ax.pop() if param.obj_name == "healthy" else ocd_ax.pop()
+        ax1.axis("off")
+        ax1.set_aspect("equal")
         ax1.imshow(img)
 
-    [a.axis('off') for a in ax.flatten()]
+    [a.axis("off") for a in ax.flatten()]
     fig.subplots_adjust(wspace=0, hspace=0)
     return fig, ax
 
@@ -80,4 +82,4 @@ def render_single_param(param: scene_parameters.SceneParameters):
     """
     (img, mask) = blender.render_single(param)
     plt.imshow(img)
-    plt.axis('off')
+    plt.axis("off")

@@ -5,10 +5,10 @@
 set -e
 echo "Executing mypy..."
 
-
+# Activate the virtual environment. 
+source .venv/bin/activate
 
 python -m mypy \
     blockies/ \
     test/ \
-    setup.py  \
     "$@"

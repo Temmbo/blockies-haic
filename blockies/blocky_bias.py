@@ -17,10 +17,13 @@ from blockies.scene_parameters import SceneParameters
 _Continuous = Union[scipy.stats.rv_continuous, Callable[[], float], float]
 Continuous = Union[_Continuous, Dict[str, _Continuous]]
 
-_Discrete = Union[scipy.stats.rv_discrete, Callable[[], float], Callable[[], str], float, str, tuple]
+_Discrete = Union[
+    scipy.stats.rv_discrete, Callable[[], float], Callable[[], str], float, str, tuple
+]
 Discrete = Union[_Discrete, Dict[str, _Discrete]]
 
 Distribution = Union[Discrete, _Continuous]
+
 
 @dataclasses.dataclass()
 class BlockySampler:
@@ -70,37 +73,52 @@ class BlockySampler:
     """
 
     # set the default sampling distributions
-    obj_name: Discrete = utils.discrete({'healthy': 0.5, 'ocd': 0.5})
+    obj_name: Discrete = utils.discrete({"healthy": 0.5, "ocd": 0.5})
     num_ill_chars: Discrete = dataclasses.field(
         default_factory=lambda: {
-            'healthy': utils.discrete({0: .25, 1: .75}),
-            'ocd': utils.discrete({2: .75, 3: .25})
+            "healthy": utils.discrete({0: 0.25, 1: 0.75}),
+            "ocd": utils.discrete({2: 0.75, 3: 0.25}),
         }
     )
 
-    ill_markers: dict = dataclasses.field(default_factory=lambda: {'high_bend': 1/4., 'high_sphere_diff': 1/4., 'stretchy': 1/4., 'mutation_mainbones': 1/4.})
+    ill_markers: dict = dataclasses.field(
+        default_factory=lambda: {
+            "high_bend": 1 / 4.0,
+            "high_sphere_diff": 1 / 4.0,
+            "stretchy": 1 / 4.0,
+            "mutation_mainbones": 1 / 4.0,
+        }
+    )
     ill_chars: dict = dataclasses.field(init=False)
 
     # set up main and secondary bones
     main_spherical: Continuous = scipy.stats.beta(0.3, 0.3)
-    sec_spherical: Continuous = utils.truncated_normal(mean=0.4, std=0.10, lower=0.05, upper=0.45)
+    sec_spherical: Continuous = utils.truncated_normal(
+        mean=0.4, std=0.10, lower=0.05, upper=0.45
+    )
     sec_bones: str = dataclasses.field(init=False)
 
-    bending: Continuous = utils.truncated_normal(mean=0.15, std=0.075, lower=0, upper=0.20)
-    arm_position: Continuous = utils.truncated_normal(mean=0.475, std=0.1, lower=0, upper=0.49)
-    labeling_error: Discrete = utils.discrete({True: 0., False: 1.})
-    obj_rotation_roll: Continuous = utils.truncated_normal(0, 0.03 * np.pi / 4,
-                                                           *utils.QUARTER_CIRCLE)
-    obj_rotation_pitch: Continuous = utils.truncated_normal(0, 0.3 * np.pi / 4,
-                                                            *utils.QUARTER_CIRCLE)
-    obj_rotation_yaw: Continuous = scipy.stats.uniform(- np.pi, np.pi)
-    fliplr: Discrete = utils.discrete({True: 0., False: 1.})
+    bending: Continuous = utils.truncated_normal(
+        mean=0.15, std=0.075, lower=0, upper=0.20
+    )
+    arm_position: Continuous = utils.truncated_normal(
+        mean=0.475, std=0.1, lower=0, upper=0.49
+    )
+    labeling_error: Discrete = utils.discrete({True: 0.0, False: 1.0})
+    obj_rotation_roll: Continuous = utils.truncated_normal(
+        0, 0.03 * np.pi / 4, *utils.QUARTER_CIRCLE
+    )
+    obj_rotation_pitch: Continuous = utils.truncated_normal(
+        0, 0.3 * np.pi / 4, *utils.QUARTER_CIRCLE
+    )
+    obj_rotation_yaw: Continuous = scipy.stats.uniform(-np.pi, np.pi)
+    fliplr: Discrete = utils.discrete({True: 0.0, False: 1.0})
     position_x: Continuous = scipy.stats.uniform(-0.8, 0.8)
     position_y: Continuous = scipy.stats.uniform(-0.8, 0.8)
-    obj_color: Continuous = scipy.stats.uniform(0., 1.)
+    obj_color: Continuous = scipy.stats.uniform(0.0, 1.0)
     bg_color: Continuous = scipy.stats.uniform(0.05, 0.90)
-    bg_color_map: str = 'coolwarm'
-    obj_color_map: str = 'coolwarm'
+    bg_color_map: str = "coolwarm"
+    obj_color_map: str = "coolwarm"
 
     def __post_init__(self):
         # TODO: remove this as, I think self.ill_chars doesn't need to be initialized here, since num_ill_chars
@@ -108,14 +126,14 @@ class BlockySampler:
         values = list(self.ill_markers.keys())
         probs = list(self.ill_markers.values())
         self.ill_chars = {
-            'healthy': utils.multiple_choice(values=values, probs=probs, size=1),
-            'ocd': utils.multiple_choice(values=values, probs=probs, size=2)
+            "healthy": utils.multiple_choice(values=values, probs=probs, size=1),
+            "ocd": utils.multiple_choice(values=values, probs=probs, size=2),
         }
-        self.sec_bones_options = ('001', '010', '100', '011',  '101', '110', '111')
-        self.sec_bones: Discrete = utils.discrete({o: 1 / len(self.sec_bones_options) for o in self.sec_bones_options})
-        
+        self.sec_bones_options = ("001", "010", "100", "011", "101", "110", "111")
+        self.sec_bones: Discrete = utils.discrete(
+            {o: 1 / len(self.sec_bones_options) for o in self.sec_bones_options}
+        )
 
-    
     def sample(self, obj_name: Optional[str] = None) -> SceneParameters:
         """Returns a new BlockySceneParameters with random values.
 
@@ -140,7 +158,7 @@ class BlockySampler:
 
         self.sample_num_ill_chars(params)
         self.sample_ill_chars(params)
-        self.sample_labeling_error(params)  
+        self.sample_labeling_error(params)
         self.sample_main_spherical(params)
         self.sample_sec_spherical(params)
         self.sample_sec_bones(params)
@@ -152,7 +170,7 @@ class BlockySampler:
         self.sample_color(params)
         params.check_values()
         return params
-    
+
     @staticmethod
     def _sample(obj_name: Optional[str], dist: Distribution, size: int = 1) -> Any:
         """Samples values from the distributon according to its type.
@@ -170,7 +188,9 @@ class BlockySampler:
         """
 
         if size > 1:
-            return tuple([BlockySampler._sample(obj_name, dist) for i in range(0, size)])
+            return tuple(
+                [BlockySampler._sample(obj_name, dist) for i in range(0, size)]
+            )
 
         if isinstance(dist, dict):
             # Rare edge case: If a dictionary was passed without the obj_name key
@@ -180,7 +200,7 @@ class BlockySampler:
             else:
                 dist = dist[obj_name]
 
-        if hasattr(dist, 'rvs'):
+        if hasattr(dist, "rvs"):
             value = dist.rvs()  # type: ignore
         elif callable(dist):
             value = dist()
@@ -190,8 +210,10 @@ class BlockySampler:
         # Unpacking float values contained in numpyarrays and list
         if type(value) in (list, tuple):
             if len(value) != 1:
-                raise ValueError(f"Expected a single element. \
-                 Got {type(value)} of size {len(value)}!")
+                raise ValueError(
+                    f"Expected a single element. \
+                 Got {type(value)} of size {len(value)}!"
+                )
             else:
                 value = value[0]
 
@@ -200,13 +222,14 @@ class BlockySampler:
 
         return value
 
-    
     def sample_obj_name(self, params: SceneParameters):
         """Samples the ``obj_name``."""
         params.obj_name = self._sample(None, self.obj_name)
-        params.mark_sampled('obj_name')
+        params.mark_sampled("obj_name")
 
-    def sample_labeling_error(self, params: SceneParameters, intervention: bool = False):
+    def sample_labeling_error(
+        self, params: SceneParameters, intervention: bool = False
+    ):
         """Samples the ``labeling_error``.
 
         Attrs:
@@ -215,16 +238,18 @@ class BlockySampler:
         """
         obj_name = self._sample_name() if intervention else params.obj_name
         params.labeling_error = self._sample(obj_name, self.labeling_error)
-        params.mark_sampled('labeling_error')
+        params.mark_sampled("labeling_error")
 
     def sample_num_ill_chars(self, params: SceneParameters):
         """Samples the number of ill characteristics to use for Blocky sampling disributions."""
         params.num_ill_chars = self._sample(params.obj_name, self.num_ill_chars)
-        params.mark_sampled('num_ill_chars')
+        params.mark_sampled("num_ill_chars")
 
-    def sample_ill_chars(self, params: SceneParameters, intervention: bool = False) -> str:
+    def sample_ill_chars(
+        self, params: SceneParameters, intervention: bool = False
+    ) -> str:
         """Samples the ill characteristics to use for Blocky sampling disributions.
-        
+
         Attrs:
             params: BlockySceneParameters for which the ill state is sampled and updated in place.
             intervention: Flag whether interventional sampling is applied. Details: see class docu.
@@ -232,19 +257,25 @@ class BlockySampler:
         obj_name = self._sample_name() if intervention else params.obj_name
         num_ill_chars = params.num_ill_chars
 
-        assert num_ill_chars < 2 if obj_name == 'healthy' else num_ill_chars <= 3, f'Invalid number of ill characteristics, {num_ill_chars} for the given obj_name {obj_name}'
+        assert num_ill_chars < 2 if obj_name == "healthy" else num_ill_chars <= 3, (
+            f"Invalid number of ill characteristics, {num_ill_chars} for the given obj_name {obj_name}"
+        )
 
         values = list(self.ill_markers.keys())
         probs = list(self.ill_markers.values())
-        char_sampler = utils.multiple_choice(values=values, probs=probs, size=num_ill_chars)
-        
+        char_sampler = utils.multiple_choice(
+            values=values, probs=probs, size=num_ill_chars
+        )
+
         ill_chars = tuple(char_sampler().tolist())
         params.ill_chars = ill_chars
 
-        params.mark_sampled('ill_chars')
+        params.mark_sampled("ill_chars")
 
     # todo: research how to decorate function with trait based distributions for more flexibility
-    def sample_main_spherical(self, params: SceneParameters, intervention: bool = False):
+    def sample_main_spherical(
+        self, params: SceneParameters, intervention: bool = False
+    ):
         """Samples the shape of the main bones.
 
         Attrs:
@@ -254,9 +285,13 @@ class BlockySampler:
         obj_name = self._sample_name() if intervention else params.obj_name
 
         mutation_dist = utils.truncated_normal(1.15, 0.025, 1.11, 1.22)
-        dist = mutation_dist if 'mutation_mainbones' in params.ill_chars else self.main_spherical
+        dist = (
+            mutation_dist
+            if "mutation_mainbones" in params.ill_chars
+            else self.main_spherical
+        )
         params.main_spherical = self._sample(obj_name, dist)
-        params.mark_sampled('main_spherical')
+        params.mark_sampled("main_spherical")
 
     # todo: how to better handle this function
     def sample_sec_spherical(self, params: SceneParameters, intervention: bool = False):
@@ -268,19 +303,25 @@ class BlockySampler:
         """
         obj_name = self._sample_name() if intervention else params.obj_name
 
-        high_sphere_dist = utils.truncated_normal(mean=0.55, std=0.1, lower=0.50, upper=0.75)
+        high_sphere_dist = utils.truncated_normal(
+            mean=0.55, std=0.1, lower=0.50, upper=0.75
+        )
 
-        dist = high_sphere_dist if 'high_sphere_diff' in params.ill_chars else self.sec_spherical
+        dist = (
+            high_sphere_dist
+            if "high_sphere_diff" in params.ill_chars
+            else self.sec_spherical
+        )
 
         sphere_diff = -1
         new_val = -1
-        while (new_val < 0 or new_val > 1.22):
+        while new_val < 0 or new_val > 1.22:
             sphere_diff = self._sample(obj_name, dist)
             dir = np.random.choice([-1, 1])
             new_val = params.main_spherical + sphere_diff * dir
 
         params.sec_spherical = new_val
-        params.mark_sampled('sec_spherical')
+        params.mark_sampled("sec_spherical")
 
     def sample_sec_bones(self, params: SceneParameters, intervention: bool = False):
         """Samples the number of secondary bones.
@@ -291,7 +332,7 @@ class BlockySampler:
         """
         obj_name = self._sample_name() if intervention else params.obj_name
         params.sec_bones = self._sample(obj_name, self.sec_bones)
-        params.mark_sampled('sec_bones')
+        params.mark_sampled("sec_bones")
 
     def sample_bending(self, params: SceneParameters, intervention: bool = False):
         """Samples the bending of the bones.
@@ -303,11 +344,13 @@ class BlockySampler:
 
         obj_name = self._sample_name() if intervention else params.obj_name
 
-        high_bend_dist = utils.truncated_normal(mean=0.25, std=0.075, lower=0.20, upper=0.3926)
+        high_bend_dist = utils.truncated_normal(
+            mean=0.25, std=0.075, lower=0.20, upper=0.3926
+        )
 
-        dist = high_bend_dist if 'high_bend' in params.ill_chars else self.bending
+        dist = high_bend_dist if "high_bend" in params.ill_chars else self.bending
         params.bending = self._sample(obj_name, dist)
-        params.mark_sampled('bending')
+        params.mark_sampled("bending")
 
     def sample_arm_position(self, params: SceneParameters, intervention: bool = False):
         """Samples the arm position.
@@ -318,11 +361,12 @@ class BlockySampler:
         """
         obj_name = self._sample_name() if intervention else params.obj_name
 
-        stretchy_dist = utils.truncated_normal(mean=0.525, std=0.1, lower=0.51, upper=1.0)
-        dist = stretchy_dist if 'stretchy' in params.ill_chars else self.arm_position
+        stretchy_dist = utils.truncated_normal(
+            mean=0.525, std=0.1, lower=0.51, upper=1.0
+        )
+        dist = stretchy_dist if "stretchy" in params.ill_chars else self.arm_position
         params.arm_position = self._sample(obj_name, dist)
-        params.mark_sampled('arm_position')
-
+        params.mark_sampled("arm_position")
 
     def sample_rotation(self, params: SceneParameters, intervention: bool = False):
         """Convienience function bundeling all object rotation functions by calling them.
@@ -335,7 +379,9 @@ class BlockySampler:
         self.sample_obj_rotation_pitch(params, intervention=intervention)
         self.sample_obj_rotation_yaw(params, intervention=intervention)
 
-    def sample_obj_rotation_roll(self, params: SceneParameters, intervention: bool = False):
+    def sample_obj_rotation_roll(
+        self, params: SceneParameters, intervention: bool = False
+    ):
         """Samples the ``obj_rotation_roll``.
 
         Attrs:
@@ -344,9 +390,11 @@ class BlockySampler:
         """
         obj_name = self._sample_name() if intervention else params.obj_name
         params.obj_rotation_roll = self._sample(obj_name, self.obj_rotation_roll)
-        params.mark_sampled('obj_rotation_roll')
+        params.mark_sampled("obj_rotation_roll")
 
-    def sample_obj_rotation_pitch(self, params: SceneParameters, intervention: bool = False):
+    def sample_obj_rotation_pitch(
+        self, params: SceneParameters, intervention: bool = False
+    ):
         """Samples the ``obj_rotation_pitch``.
 
         Attrs:
@@ -355,9 +403,11 @@ class BlockySampler:
         """
         obj_name = self._sample_name() if intervention else params.obj_name
         params.obj_rotation_pitch = self._sample(obj_name, self.obj_rotation_pitch)
-        params.mark_sampled('obj_rotation_pitch')
+        params.mark_sampled("obj_rotation_pitch")
 
-    def sample_obj_rotation_yaw(self, params: SceneParameters, intervention: bool = False):
+    def sample_obj_rotation_yaw(
+        self, params: SceneParameters, intervention: bool = False
+    ):
         """Samples the ``obj_rotation_yaw``.
 
         Attrs:
@@ -366,7 +416,7 @@ class BlockySampler:
         """
         obj_name = self._sample_name() if intervention else params.obj_name
         params.obj_rotation_yaw = self._sample(obj_name, self.obj_rotation_yaw)
-        params.mark_sampled('obj_rotation_yaw')
+        params.mark_sampled("obj_rotation_yaw")
 
     def sample_fliplr(self, params: SceneParameters, intervention: bool = False):
         """Samples the ``fliplr``.
@@ -377,7 +427,7 @@ class BlockySampler:
         """
         obj_name = self._sample_name() if intervention else params.obj_name
         params.fliplr = self._sample(obj_name, self.fliplr)
-        params.mark_sampled('fliplr')
+        params.mark_sampled("fliplr")
 
     def sample_position(self, params: SceneParameters, intervention: bool = False):
         """Convienience function calling ``sample_position_x`` and ``sample_position_y``.
@@ -398,7 +448,7 @@ class BlockySampler:
         """
         obj_name = self._sample_name() if intervention else params.obj_name
         params.position_x = self._sample(obj_name, self.position_x)
-        params.mark_sampled('position_x')
+        params.mark_sampled("position_x")
 
     def sample_position_y(self, params: SceneParameters, intervention: bool = False):
         """Samples ``position_y`` of the object.
@@ -409,7 +459,7 @@ class BlockySampler:
         """
         obj_name = self._sample_name() if intervention else params.obj_name
         params.position_y = self._sample(obj_name, self.position_y)
-        params.mark_sampled('position_y')
+        params.mark_sampled("position_y")
 
     def _object_cmap(self, params: SceneParameters) -> mpl.colors.Colormap:
         return plt.get_cmap(self.obj_color_map)
@@ -434,7 +484,7 @@ class BlockySampler:
         obj_name = self._sample_name() if intervention else params.obj_name
         params.obj_color = float(self._sample(obj_name, self.obj_color))
         params.obj_color_rgba = tuple(self._object_cmap(params)(params.obj_color))  # type: ignore
-        params.mark_sampled('obj_color')
+        params.mark_sampled("obj_color")
 
     def _bg_cmap(self, params: SceneParameters) -> mpl.colors.Colormap:
         return plt.get_cmap(self.bg_color_map)
@@ -449,13 +499,15 @@ class BlockySampler:
         obj_name = self._sample_name() if intervention else params.obj_name
         params.bg_color = float(self._sample(obj_name, self.bg_color))
         params.bg_color_rgba = tuple(self._bg_cmap(params)(params.bg_color))  # type: ignore
-        params.mark_sampled('bg_color')
+        params.mark_sampled("bg_color")
+
 
 @dataclasses.dataclass()
 class BlockyHighVarSampler(BlockySampler):
-    """ Base Sampler for Sick Ones dataset with a bend biases for the Ill class, and high variation 
-        in rotation to make it slightly more difficult.  
+    """Base Sampler for Sick Ones dataset with a bend biases for the Ill class, and high variation
+    in rotation to make it slightly more difficult.
     """
-    obj_rotation_roll: Continuous = scipy.stats.uniform(- np.pi / 4, 2 * np.pi / 4)
-    obj_rotation_yaw: Continuous = scipy.stats.uniform(- np.pi * 0.75, np.pi * 0.75)
-    obj_rotation_pitch: Continuous = scipy.stats.uniform(- np.pi / 4, 2 * np.pi / 4)
+
+    obj_rotation_roll: Continuous = scipy.stats.uniform(-np.pi / 4, 2 * np.pi / 4)
+    obj_rotation_yaw: Continuous = scipy.stats.uniform(-np.pi * 0.75, np.pi * 0.75)
+    obj_rotation_pitch: Continuous = scipy.stats.uniform(-np.pi / 4, 2 * np.pi / 4)

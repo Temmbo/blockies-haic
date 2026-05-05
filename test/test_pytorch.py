@@ -18,16 +18,16 @@ def test_pytorch_dataloader(tmp_path: Path):
     sampler = blockies.BlockySampler()
     sampled_params = [sampler.sample() for _ in range(2)]
 
-    (tmp_path / 'train').mkdir()
+    (tmp_path / "train").mkdir()
 
     for _ in blockies.render(
         sampled_params,
         n_processes=1,
-        output_dir=str(tmp_path / 'train'),
+        output_dir=str(tmp_path / "train"),
     ):
         pass
 
-    dataset = blockies.pytorch.Blockies(str(tmp_path), split='train')
+    dataset = blockies.pytorch.Blockies(str(tmp_path), split="train")
 
     df = dataset.get_dataframe()
     assert df.obj_name[0] == sampled_params[0].obj_name
@@ -59,17 +59,19 @@ def test_pytorch_dataloader(tmp_path: Path):
 
     assert imgs.shape == (2, 3, 256, 256)
     assert masks.shape == (2, 1, 256, 256)
-    assert labels.shape == (2, 1,)
+    assert labels.shape == (
+        2,
+        1,
+    )
 
-    dataset.set_return_attributes([
-        'obj_name', 'bending', 'bg_color', 'main_spherical'])
+    dataset.set_return_attributes(["obj_name", "bending", "bg_color", "main_spherical"])
 
     label_names = dataset.get_label_names()
     expected_label_names = [
-        'obj_name',
-        'bending',
-        'bg_color',
-        'main_spherical',
+        "obj_name",
+        "bending",
+        "bg_color",
+        "main_spherical",
     ]
     assert label_names == expected_label_names
 

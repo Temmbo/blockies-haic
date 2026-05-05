@@ -1,4 +1,5 @@
 """Module to render images using blender."""
+
 import json
 import os
 import shutil
@@ -16,22 +17,22 @@ from blockies import utils
 
 def _download_blender(blender_dir: str):
     """Downloads blender to the given directory."""
-    download_script = os.path.join(os.path.dirname(__file__),
-                                   'download_blender.sh')
+    download_script = os.path.join(os.path.dirname(__file__), "download_blender.sh")
 
     args = [
-        'sh',
-        '-c',
-        f"{download_script} \"{blender_dir}\"",
+        "sh",
+        "-c",
+        f'{download_script} "{blender_dir}"',
     ]
     print(f"Downloading Blender to {blender_dir}")
     subprocess.check_output(args)
 
 
-def ensure_blender_available(blender_dir: Optional[str] = None,
-                             download_blender: bool = False):
+def ensure_blender_available(
+    blender_dir: Optional[str] = None, download_blender: bool = False
+):
     """Ensures blender is available in the given directory."""
-    blender_dir = blender_dir or os.path.join(os.environ['HOME'], '.cache', 'blockies')
+    blender_dir = blender_dir or os.path.join(os.environ["HOME"], ".cache", "blockies")
 
     blender_binary = os.path.join(blender_dir, "blender_bin")
     found_blender = os.path.exists(blender_binary)
@@ -39,7 +40,8 @@ def ensure_blender_available(blender_dir: Optional[str] = None,
     if not found_blender and not download_blender:
         raise FileNotFoundError(
             "Please download blender version 2.83.9 or "
-            "set ``download_blender=True`` to download it automatically!")
+            "set ``download_blender=True`` to download it automatically!"
+        )
     elif not found_blender and download_blender:
         _download_blender(blender_dir)
     else:  # found blender
@@ -85,26 +87,25 @@ def _split_param_file(parameter_file: str, chunk_size: int) -> Sequence[str]:
     chunk_parameter_files = []
     name, ext = os.path.splitext(parameter_file)
     for idx in range(num_chunks):
-        filename = f'{name}_chunk_{idx + 1}{ext}'
+        filename = f"{name}_chunk_{idx + 1}{ext}"
         chunk_parameter_files.append(filename)
-        with open(filename, 'x') as f:
-            f.writelines(lines[idx * chunk_size:(idx + 1) * chunk_size])
+        with open(filename, "x") as f:
+            f.writelines(lines[idx * chunk_size: (idx + 1) * chunk_size])
     return chunk_parameter_files
 
 
 def _get_finished_processes(
-    processes: Dict[str, subprocess.Popen],
-    print_output: bool
+    processes: Dict[str, subprocess.Popen], print_output: bool
 ) -> Sequence[str]:
     """Returns the keys of any finished processes."""
     finised_processes = []
     for chunk, process in processes.items():
         try:
-            stdout, stderr = process.communicate(timeout=.2)
+            stdout, stderr = process.communicate(timeout=0.2)
             if stdout is not None and print_output:
-                print(stdout.decode('utf-8'))
+                print(stdout.decode("utf-8"))
             if stderr is not None and print_output:
-                print(stderr.decode('utf-8'), file=sys.stderr)
+                print(stderr.decode("utf-8"), file=sys.stderr)
         except subprocess.TimeoutExpired:
             if process.returncode is None:
                 continue
@@ -119,28 +120,28 @@ def _get_finished_processes(
 
 
 SEGMENTATION_INT_TO_NAME: Dict[int, str] = {
-    0: 'background',
-    1: 'arm_left_top',
-    2: 'arm_left_bottom',
-    3: 'spine_left',
-    4: 'spine_left_center',
-    5: 'spine_right_center',
-    6: 'spine_right',
-    7: 'arm_right_top',
-    8: 'arm_right_bottom',
+    0: "background",
+    1: "arm_left_top",
+    2: "arm_left_bottom",
+    3: "spine_left",
+    4: "spine_left_center",
+    5: "spine_right_center",
+    6: "spine_right",
+    7: "arm_right_top",
+    8: "arm_right_bottom",
 }
 
 
 SEGMENTATION_NAME_TO_INT: Dict[str, int] = {
-    'background': 0,
-    'arm_left_top': 1,
-    'arm_left_bottom': 2,
-    'spine_left': 3,
-    'spine_left_center': 4,
-    'spine_right_center': 5,
-    'spine_right': 6,
-    'arm_right_top': 7,
-    'arm_right_bottom': 8,
+    "background": 0,
+    "arm_left_top": 1,
+    "arm_left_bottom": 2,
+    "spine_left": 3,
+    "spine_left_center": 4,
+    "spine_right_center": 5,
+    "spine_right": 6,
+    "arm_right_top": 7,
+    "arm_right_bottom": 8,
 }
 
 
@@ -153,7 +154,7 @@ def render(
     download_blender: bool = False,
     print_output: bool = False,
     print_cmd: bool = False,
-    save_blender_file: bool = False
+    save_blender_file: bool = False,
 ) -> Iterator[Tuple[np.ndarray, np.ndarray, scene_parameters.SceneParameters]]:
     """Renders the given parameters to images using Blender.
 
@@ -190,7 +191,8 @@ def render(
         parameter_file = parameter_chunks[next_chunk]
 
         execute_blender_script = os.path.join(
-            os.path.dirname(__file__), 'execute_blender.sh')
+            os.path.dirname(__file__), "execute_blender.sh"
+        )
         args = [
             execute_blender_script,
             blender_dir,
@@ -204,24 +206,21 @@ def render(
             print(" ".join(args))
         env = os.environ.copy()
         # ensure no matplotlib backend is set for subprocess.
-        env.pop('MPLBACKEND', None)
-        proc = subprocess.Popen(args,
-                                stdin=subprocess.PIPE,
-                                stdout=subprocess.PIPE,
-                                env=env)
+        env.pop("MPLBACKEND", None)
+        proc = subprocess.Popen(
+            args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, env=env
+        )
         processes[parameter_file] = proc
         next_chunk += 1
 
     n_processes = n_processes or (os.cpu_count() or 1)
 
-    blender_dir = blender_dir or os.path.join(os.environ['HOME'], '.cache', 'blockies')
+    blender_dir = blender_dir or os.path.join(os.environ["HOME"], ".cache", "blockies")
 
     ensure_blender_available(blender_dir, download_blender)
 
     package_directory = os.path.dirname(__file__)
-    render_script = os.path.join(package_directory,
-                                 '_blender',
-                                 'render_samples.py')
+    render_script = os.path.join(package_directory, "_blender", "render_samples.py")
 
     # process and the processes chunk file
     processes: Dict[str, subprocess.Popen] = {}
@@ -229,12 +228,12 @@ def render(
     use_tmp_dir = output_dir is None
     try:
         output_dir = utils.get(output_dir, tempfile.mkdtemp())
-        parameter_file = os.path.join(output_dir, 'parameters.jsonl')
+        parameter_file = os.path.join(output_dir, "parameters.jsonl")
 
         # dump parameters
-        with open(parameter_file, 'x') as f:
+        with open(parameter_file, "x") as f:
             for param in params:
-                f.write(json.dumps(param.state_dict()) + '\n')
+                f.write(json.dumps(param.state_dict()) + "\n")
 
         parameter_chunks = _split_param_file(parameter_file, chunk_size)
         num_of_chunks = len(parameter_chunks)
@@ -243,7 +242,9 @@ def render(
         while next_chunk < num_of_chunks or processes:
             finished_chunks = _get_finished_processes(processes, print_output)
             for chunk in finished_chunks:
-                for img, mask, param in _load_images_from_param_file(chunk, delete=use_tmp_dir):
+                for img, mask, param in _load_images_from_param_file(
+                    chunk, delete=use_tmp_dir
+                ):
                     yield img, mask, param
                 del processes[chunk]
 
@@ -260,7 +261,7 @@ def render_single(
     download_blender: bool = False,
     print_output: bool = False,
     print_cmd: bool = False,
-    save_blender_file: bool = False
+    save_blender_file: bool = False,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Convienience function. Renders a single images with Blender using the given SceneParameters.
 
@@ -282,13 +283,17 @@ def render_single(
     Yields:
         tuple of (rendered image, segmentation mask of image).
     """
-    result = list(render([param],
-                         n_processes=1,
-                         chunk_size=1,
-                         blender_dir=blender_dir,
-                         download_blender=download_blender,
-                         print_output=print_output,
-                         print_cmd=print_cmd,
-                         save_blender_file=save_blender_file))
+    result = list(
+        render(
+            [param],
+            n_processes=1,
+            chunk_size=1,
+            blender_dir=blender_dir,
+            download_blender=download_blender,
+            print_output=print_output,
+            print_cmd=print_cmd,
+            save_blender_file=save_blender_file,
+        )
+    )
 
     return (result[0][0], result[0][1])

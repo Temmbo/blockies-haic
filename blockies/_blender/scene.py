@@ -15,28 +15,28 @@ from blockies._blender import blender_object
 from blockies._blender import butils
 
 
-class Scene():
+class Scene:
     """A Blender scene.
 
     Args:
         parameters: SceneParameters
     """
 
-    def _set_pose(self,
-                  bending: float):
+    def _set_pose(self, bending: float):
         self.obj.set_pose(blender_object.BoneRotation.from_bending(bending))
         self.obj.center()
 
-    def _set_rotation(self,
-                      yaw: float,
-                      roll: float,
-                      pitch: float,
-                      ):
+    def _set_rotation(
+        self,
+        yaw: float,
+        roll: float,
+        pitch: float,
+    ):
         # TODO(martin) add link to image when #89 is done
 
-        self.obj.rotate(roll, 'Y')
-        self.obj.rotate(pitch, 'Z')
-        self.obj.rotate(yaw, 'X')
+        self.obj.rotate(roll, "Y")
+        self.obj.rotate(pitch, "Z")
+        self.obj.rotate(yaw, "X")
         self.obj.center()
 
     def _set_position(self, x: float, y: float):
@@ -46,29 +46,31 @@ class Scene():
         self,
         background_color: utils.RGBAColor,
     ):
-        light_size = 20.
+        light_size = 20.0
         scene = bpy.context.scene
-        bpy.ops.object.light_add(type='AREA',
-                                 location=(10, 10, 10))
-        bpy.context.active_object.name = 'light'
-        light = bpy.data.objects['light']
-        light.data.shape = 'ELLIPSE'
+        bpy.ops.object.light_add(type="AREA", location=(10, 10, 10))
+        bpy.context.active_object.name = "light"
+        light = bpy.data.objects["light"]
+        light.data.shape = "ELLIPSE"
         light.data.size = light_size
         light.data.size_y = 15
         light.data.energy = 5000 / 20 * light_size * 4
         light.rotation_euler = (np.pi / 4, np.pi / 4, np.pi / 2)
 
-        bpy.ops.object.camera_add(location=(9, 0, 0),
-                                  rotation=(np.pi / 2, 0, np.pi / 2))
+        bpy.ops.object.camera_add(
+            location=(9, 0, 0), rotation=(np.pi / 2, 0, np.pi / 2)
+        )
         scene.camera = bpy.context.object
 
-        bpy.ops.mesh.primitive_plane_add(size=20,
-                                         enter_editmode=False,
-                                         location=(self.obj.boundaries[0][0] - 10, 0, 0),
-                                         rotation=(0, np.pi / 2, 0))
-        bpy.context.active_object.name = 'background'
+        bpy.ops.mesh.primitive_plane_add(
+            size=20,
+            enter_editmode=False,
+            location=(self.obj.boundaries[0][0] - 10, 0, 0),
+            rotation=(0, np.pi / 2, 0),
+        )
+        bpy.context.active_object.name = "background"
         self.background = bpy.context.view_layer.objects.active
-        mat = bpy.data.materials.new(name='background_material')
+        mat = bpy.data.materials.new(name="background_material")
         self.background.data.materials.append(mat)
         self.background.active_material.diffuse_color = background_color
 
@@ -87,10 +89,10 @@ class Scene():
             emission_mask = color.rgb2hsv(emission_mask_rgba[:, :, :3])
             distances = []
             for idx, hue in enumerate(color_hues):
-                distances.append(
-                    np.abs(emission_mask[:, :, 0] - hue)
-                )
-            segmentation_mask = np.argmin(np.stack(distances, axis=0), axis=0).astype(np.uint8)
+                distances.append(np.abs(emission_mask[:, :, 0] - hue))
+            segmentation_mask = np.argmin(np.stack(distances, axis=0), axis=0).astype(
+                np.uint8
+            )
             imageio.imwrite(mask_filename, segmentation_mask)
         finally:
             os.remove(emission_fname)
@@ -122,11 +124,11 @@ class Scene():
 
         # Override some render settings to have flat shading
         render.filepath = path
-        render.engine = 'CYCLES'
+        render.engine = "CYCLES"
 
         # disable anti-aliasing
 
-        cycles.filter_type = 'BLACKMAN_HARRIS'
+        cycles.filter_type = "BLACKMAN_HARRIS"
         # ensures that each pixel is sampled at the same location
         cycles.filter_width = 0.01
         # one ray sample per pixel
@@ -135,8 +137,10 @@ class Scene():
         n_objs = len(blender_objects)
         hues = [i / n_objs for i in range(n_objs)]
 
-        object_colors = [color.hsv2rgb([hue, 1, 1]).tolist() + [1, ]
-                         for hue in hues]
+        object_colors = [
+            color.hsv2rgb([hue, 1, 1]).tolist() + [1,]
+            for hue in hues
+        ]
         old_materials = []
         for i, obj in enumerate(blender_objects):
             old_materials.append(obj.data.materials[0])
@@ -154,7 +158,7 @@ class Scene():
             node_emission = nodes["Emission"]
 
             # create material output node
-            node_output = nodes.new(type='ShaderNodeOutputMaterial')
+            node_output = nodes.new(type="ShaderNodeOutputMaterial")
             node_output.location = 400, 0
             # link emission to output node
             links = mat.node_tree.links
@@ -186,12 +190,9 @@ class Scene():
         img_flip_lr = img[:, ::-1]
         imageio.imwrite(image_filename, img_flip_lr)
 
-    def render(self,
-               image_filename: str,
-               mask_filename: str = None
-               ):
+    def render(self, image_filename: str, mask_filename: str = None):
         """Renders the scene and saves it at the given ``filename``."""
-        bpy.data.scenes['Scene'].render.filepath = image_filename
+        bpy.data.scenes["Scene"].render.filepath = image_filename
         bpy.ops.render.render(write_still=True)
 
         if self.parameters.fliplr:
@@ -206,9 +207,10 @@ class Scene():
         """Saves the current blender state to the given filename."""
         bpy.ops.wm.save_as_mainfile(filepath=filename)
 
-    def __init__(self,
-                 parameters: scene_parameters.SceneParameters,
-                 ):
+    def __init__(
+        self,
+        parameters: scene_parameters.SceneParameters,
+    ):
         butils.clear_all()
         self.parameters = parameters
 
@@ -217,7 +219,8 @@ class Scene():
             parameters.main_spherical,
             parameters.sec_spherical,
             parameters.arm_position,
-            parameters.sec_bones)
+            parameters.sec_bones,
+        )
         self.obj.add_material(parameters.obj_color_rgba)
 
         blend_dir = os.path.dirname(bpy.data.filepath)
@@ -238,8 +241,8 @@ class Scene():
         self._setup_scene(parameters.bg_color_rgba)
 
         res_x, res_y = parameters.resolution
-        bpy.context.scene.render.engine = 'CYCLES'
+        bpy.context.scene.render.engine = "CYCLES"
         # bpy.context.scene.use_nodes = True
-        bpy.context.scene.cycles.device = 'GPU'
+        bpy.context.scene.cycles.device = "GPU"
         bpy.context.scene.render.resolution_x = res_x
         bpy.context.scene.render.resolution_y = res_y

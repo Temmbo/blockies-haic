@@ -16,18 +16,23 @@ from blockies import utils
 
 
 OBJ_NAME_TO_INT = {
-    'healthy': 0,
-    'ocd': 1,
+    "healthy": 0,
+    "ocd": 1,
 }
 """Mapping from SceneParameters.obj_name to an integer. Please use this
 encoding convention if you train a binary classifier."""
 
 # Setup ILL characteristics and their probabilities
-ILL_MARKERS = {'high_bend': .30, 'high_sphere_diff': .30, 'mutation_mainbones': .10, 'stretchy': .30}
+ILL_MARKERS = {
+    "high_bend": 0.30,
+    "high_sphere_diff": 0.30,
+    "mutation_mainbones": 0.10,
+    "stretchy": 0.30,
+}
 
 
 @dataclasses.dataclass()
-class SceneParameters():
+class SceneParameters:
     """All parameters need to render a single image / scene.
 
     See the ``SceneParameters.VALID_VALUES`` for valid value ranges for the
@@ -65,31 +70,46 @@ class SceneParameters():
         original_id: The id of the original SceneParameters before cloning
 
     """
-    # TODO: once #38 is done. describe the coordinate system in full detail.
-    obj_name: str = 'healthy'           # encondes class of the generate blocky
-    num_ill_chars: int = 0              # encondes the number of ILL characteristics of the blocky
-    ill_chars: Union[tuple[str], None] = ()  # encondes the ILL characteristics of the blocky
-    labeling_error: bool = False
-    main_spherical: float = 0.9         # encodes the sphericality of the main bones of a blocky
-    sec_spherical: float = 0.6          # encodes the sphericality of the sec bones of a blocky
-    sec_bones: str = '001'              # encodes the number and postion of secondary bones of a blocky (each digit is a bone)
-    bending: float = 0.0                # encodes the bending of the blocky posture
-    obj_rotation_roll: float = 0.0      # encodes the rotation of the blocky around the Y axis
-    obj_rotation_pitch: float = 0.0     # encodes the rotation of the blocky around the Z axis
-    obj_rotation_yaw: float = 0.0       # encodes the rotation of the blocky around the X axis
-    fliplr: bool = False                # encodes if the blocky should be flipped left to right
-    position_x: float = 0.0             # encodes the position of the blocky on the x-axis
-    position_y: float = 0.0             # encodes the position of the blocky on the y-axis
-    arm_position: float = 0.0           # encodes the absolute position of the arms of the blocky
 
-    obj_color: float = 0.5              # encodes the color of the blocky
+    # TODO: once #38 is done. describe the coordinate system in full detail.
+    obj_name: str = "healthy"  # encondes class of the generate blocky
+    num_ill_chars: int = 0  # encondes the number of ILL characteristics of the blocky
+    ill_chars: Union[
+        tuple[str], None
+    ] = ()  # encondes the ILL characteristics of the blocky
+    labeling_error: bool = False
+    main_spherical: float = (
+        0.9  # encodes the sphericality of the main bones of a blocky
+    )
+    sec_spherical: float = 0.6  # encodes the sphericality of the sec bones of a blocky
+    sec_bones: str = "001"  # encodes the number and postion of secondary bones of a blocky (each digit is a bone)
+    bending: float = 0.0  # encodes the bending of the blocky posture
+    obj_rotation_roll: float = (
+        0.0  # encodes the rotation of the blocky around the Y axis
+    )
+    obj_rotation_pitch: float = (
+        0.0  # encodes the rotation of the blocky around the Z axis
+    )
+    obj_rotation_yaw: float = (
+        0.0  # encodes the rotation of the blocky around the X axis
+    )
+    fliplr: bool = False  # encodes if the blocky should be flipped left to right
+    position_x: float = 0.0  # encodes the position of the blocky on the x-axis
+    position_y: float = 0.0  # encodes the position of the blocky on the y-axis
+    arm_position: float = 0.0  # encodes the absolute position of the arms of the blocky
+
+    obj_color: float = 0.5  # encodes the color of the blocky
     # When passing 0.5 to the cmap 'seismic' the following color is obtained
     obj_color_rgba: utils.RGBAColor = (1.0, 0.9921568627450981, 0.9921568627450981, 1.0)
 
-    bg_color: float = 0.45              # encodes the color of the background
+    bg_color: float = 0.45  # encodes the color of the background
     # When passing 0.45 to the cmap 'binary' the following color is obtained
     bg_color_rgba: utils.RGBAColor = (
-        0.5490196078431373, 0.5490196078431373, 0.5490196078431373, 1.0)
+        0.5490196078431373,
+        0.5490196078431373,
+        0.5490196078431373,
+        1.0,
+    )
 
     resolution: Tuple[int, int] = (256, 256)
 
@@ -99,53 +119,60 @@ class SceneParameters():
     _attributes_status: Dict[str, str] = dataclasses.field(
         repr=False,
         default_factory=lambda: {
-            'obj_name': 'default',
-            'num_ill_chars': 'default',
-            'ill_chars': 'default',
-            'labeling_error': 'default',
-            'main_spherical': 'default',
-            'sec_spherical': 'default',
-            'sec_bones': 'default',
-            'bending': 'default',
-            'obj_rotation_roll': 'default',
-            'obj_rotation_pitch': 'default',
-            'obj_rotation_yaw': 'default',
-            'fliplr': 'default',
-            'position_x': 'default',
-            'position_y': 'default',
-            'arm_position': 'default',
-            'bg_color': 'default',
-            'obj_color': 'default'
-        })
+            "obj_name": "default",
+            "num_ill_chars": "default",
+            "ill_chars": "default",
+            "labeling_error": "default",
+            "main_spherical": "default",
+            "sec_spherical": "default",
+            "sec_bones": "default",
+            "bending": "default",
+            "obj_rotation_roll": "default",
+            "obj_rotation_pitch": "default",
+            "obj_rotation_yaw": "default",
+            "fliplr": "default",
+            "position_x": "default",
+            "position_y": "default",
+            "arm_position": "default",
+            "bg_color": "default",
+            "obj_color": "default",
+        },
+    )
 
-    VALID_VALUES: ClassVar[dict[
-        str, Union[
-            tuple[float, float],
-            set[bool],
-            set[str],
-        ]]] = {
-        'num_ill_chars': (0, 4),
-
+    VALID_VALUES: ClassVar[
+        dict[
+            str,
+            Union[
+                tuple[float, float],
+                set[bool],
+                set[str],
+            ],
+        ]
+    ] = {
+        "num_ill_chars": (0, 4),
         # check for all possible combinations of ILL_MARKERS
-        'ill_chars': set([()] + list(
-            itertools.chain.from_iterable(
-                itertools.permutations(ILL_MARKERS.keys(), r) for r in range(1, 5)
-            ))),
-        'main_spherical': (0., 1.22),
-        'sec_spherical': (0., 1.22),
-        'sec_bones': set(('001', '010', '100', '011', '101', '110', '111')),
-        'arm_position': (0., 1.),
-        'bending': (- math.pi / 8, math.pi / 8),
-        'obj_name': set(['healthy', 'ocd']),
-        'labeling_error': set([False, True]),
-        'obj_rotation_roll': (- math.pi / 3, math.pi / 3),
-        'obj_rotation_pitch': (- math.pi / 3, math.pi / 3),
-        'obj_rotation_yaw': utils.FULL_CIRCLE,
-        'fliplr': set([True, False]),
-        'position_x': (-3.0, 3.0),
-        'position_y': (-3.0, 3.0),
-        'obj_color': (0., 1.),
-        'bg_color': (0., 1.),
+        "ill_chars": set(
+            [()] + list(
+                itertools.chain.from_iterable(
+                    itertools.permutations(ILL_MARKERS.keys(), r) for r in range(1, 5)
+                )
+            )
+        ),
+        "main_spherical": (0.0, 1.22),
+        "sec_spherical": (0.0, 1.22),
+        "sec_bones": set(("001", "010", "100", "011", "101", "110", "111")),
+        "arm_position": (0.0, 1.0),
+        "bending": (-math.pi / 8, math.pi / 8),
+        "obj_name": set(["healthy", "ocd"]),
+        "labeling_error": set([False, True]),
+        "obj_rotation_roll": (-math.pi / 3, math.pi / 3),
+        "obj_rotation_pitch": (-math.pi / 3, math.pi / 3),
+        "obj_rotation_yaw": utils.FULL_CIRCLE,
+        "fliplr": set([True, False]),
+        "position_x": (-3.0, 3.0),
+        "position_y": (-3.0, 3.0),
+        "obj_color": (0.0, 1.0),
+        "bg_color": (0.0, 1.0),
     }
 
     @classmethod
@@ -157,13 +184,13 @@ class SceneParameters():
     def default_ocd(cls) -> SceneParameters:
         """Creates SceneParameters with default values for a Blocky with OCDegen."""
         params = cls()
-        params.obj_name = 'ocd'
+        params.obj_name = "ocd"
         params.num_ill_chars = 3
-        params.ill_chars = ['strong_bend', 'strong_sphere_diff', 'stretchy']
+        params.ill_chars = ["strong_bend", "strong_sphere_diff", "stretchy"]
         params.bending = 0.3
         params.main_spherical = 0.85
         params.sec_spherical = 0.3
-        params.sec_bones = '111'  # one secondary bone
+        params.sec_bones = "111"  # one secondary bone
         params.arm_position = 0.9
         return params
 
@@ -185,18 +212,24 @@ class SceneParameters():
         for name, valid in self.VALID_VALUES.items():
             value = getattr(self, name)
             # value can be either a single value or multiple
-            if type(value) is str or not utils.supports_iteration(value) or name == 'ill_chars':
+            if (
+                type(value) is str or not utils.supports_iteration(value) or name == "ill_chars"
+            ):
                 # test for a single value (or list of ill_chars)
                 if not self._is_allowed_value(value, name):
-                    raise ValueError(f"Attribute {name} has value {value} but "
-                                     f"valid values would be in {valid}.")
+                    raise ValueError(
+                        f"Attribute {name} has value {value} but "
+                        f"valid values would be in {valid}."
+                    )
             else:
                 # test each value individually
                 for i, item in enumerate(value):
                     if not self._is_allowed_value(item, name):
                         raise ValueError(
-                            f"Attribute {name} has value {item}"" at position"
-                            f" {i} but valid values would be in {valid}.")
+                            f"Attribute {name} has value {item}"
+                            " at position"
+                            f" {i} but valid values would be in {valid}."
+                        )
 
     def __post_init__(self):
         # convert possible lists to tuples
@@ -217,9 +250,9 @@ class SceneParameters():
         the correct subclass.
         """
         state = copy.copy(state)
-        module = state.pop('__module__')
-        cls_name = state.pop('__name__')
-        state.pop('label', None)
+        module = state.pop("__module__")
+        cls_name = state.pop("__name__")
+        state.pop("label", None)
 
         module = importlib.import_module(module)
         cls = getattr(module, cls_name)
@@ -228,9 +261,9 @@ class SceneParameters():
     def state_dict(self) -> Dict[str, Any]:
         """Returns the object as python dict."""
         state = dataclasses.asdict(self)
-        state['label'] = self.obj_name_with_label_error
-        state['__module__'] = type(self).__module__
-        state['__name__'] = type(self).__qualname__
+        state["label"] = self.obj_name_with_label_error
+        state["__module__"] = type(self).__module__
+        state["__name__"] = type(self).__qualname__
         return state
 
     def __str__(self) -> str:
@@ -238,7 +271,12 @@ class SceneParameters():
         pp = pprint.PrettyPrinter(indent=2)
 
         return self.__class__.__name__ + pp.pformat(
-            {k: self.__dict__[k] for k in self.__dict__.keys() if k != "_attributes_status"})
+            {
+                k: self.__dict__[k]
+                for k in self.__dict__.keys()
+                if k != "_attributes_status"
+            }
+        )
 
     def clone(self, create_new_id: bool = True) -> SceneParameters:
         """Returns a deep copy.
@@ -296,7 +334,7 @@ class SceneParameters():
         """
         # Get status will throw type error of atribute is untracked
         self.get_status(attribute)
-        self._attributes_status[attribute] = 'custom'
+        self._attributes_status[attribute] = "custom"
 
     def mark_sampled(self, attribute: str):
         """Updates the status of the attribute to sampled or resampled.
@@ -308,15 +346,17 @@ class SceneParameters():
         """
         # Get status will throw type error of atribute is untracked
         status = self.get_status(attribute)
-        if status in ('default', 'custom'):
-            self._attributes_status[attribute] = 'sampled'
-        elif status == 'sampled':
-            self._attributes_status[attribute] = 'resampled'
-        elif status == 'resampled':
+        if status in ("default", "custom"):
+            self._attributes_status[attribute] = "sampled"
+        elif status == "sampled":
+            self._attributes_status[attribute] = "resampled"
+        elif status == "resampled":
             pass
         else:
-            raise ValueError(f"Expected status default, custom, sampled \
-            or resampled, got {self._attributes_status[attribute]}")
+            raise ValueError(
+                f"Expected status default, custom, sampled \
+            or resampled, got {self._attributes_status[attribute]}"
+            )
 
     @property
     def filename(self) -> str:
@@ -332,13 +372,12 @@ class SceneParameters():
     def obj_name_with_label_error(self) -> str:
         """Returns the object name taking into account the label error."""
         flip_obj_name = {
-            'healthy': 'ocd',
-            'ocd': 'healthy',
+            "healthy": "ocd",
+            "ocd": "healthy",
         }
-        return {
-            False: self.obj_name,
-            True: flip_obj_name[self.obj_name]
-        }[self.labeling_error]
+        return {False: self.obj_name, True: flip_obj_name[self.obj_name]}[
+            self.labeling_error
+        ]
 
     @property
     def obj_name_as_int(self) -> int:
@@ -349,14 +388,12 @@ class SceneParameters():
 def load_jsonl(path: str) -> List[SceneParameters]:
     """Loads SceneParameters from jsonl file."""
     with open(path) as f:
-        return [SceneParameters.load(json.loads(line))
-                for line in f.readlines()]
+        return [SceneParameters.load(json.loads(line)) for line in f.readlines()]
 
 
-def split_healthy_ocd(params: List[SceneParameters],
-                      num_samples: int = None
-                      ) -> Tuple[List[SceneParameters],
-                                 List[SceneParameters]]:
+def split_healthy_ocd(
+    params: List[SceneParameters], num_samples: int = None
+) -> Tuple[List[SceneParameters], List[SceneParameters]]:
     """Returns a tuple of SceneParameters split by their type.
 
     Attrs:
@@ -365,5 +402,7 @@ def split_healthy_ocd(params: List[SceneParameters],
 
 
     """
-    return ([p for p in params if p.obj_name == 'healthy'][:num_samples],
-            [p for p in params if p.obj_name == 'ocd'][:num_samples])
+    return (
+        [p for p in params if p.obj_name == "healthy"][:num_samples],
+        [p for p in params if p.obj_name == "ocd"][:num_samples],
+    )

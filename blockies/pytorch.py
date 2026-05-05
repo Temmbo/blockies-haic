@@ -24,10 +24,10 @@ def filter_attributes(param: blockies.SceneParameters) -> Dict[str, Any]:
     Filter the ``*_rbga``, ``resolution`` and ``_attributes_status`` attributes.
     """
     state = dataclasses.asdict(param)
-    del state['obj_color_rgba']
-    del state['bg_color_rgba']
-    del state['resolution']
-    del state['_attributes_status']
+    del state["obj_color_rgba"]
+    del state["bg_color_rgba"]
+    del state["resolution"]
+    del state["_attributes_status"]
     return state
 
 
@@ -39,9 +39,9 @@ def all_attributes(param: blockies.SceneParameters) -> Dict[str, Any]:
     ``attribute_status_obj_name`` for the object name.
     """
     state = dataclasses.asdict(param)
-    for attr, attr_state in state['_attributes_status'].items():
-        state[f'attribute_status_{attr}'] = attr_state
-    del state['_attributes_status']
+    for attr, attr_state in state["_attributes_status"].items():
+        state[f"attribute_status_{attr}"] = attr_state
+    del state["_attributes_status"]
     return state
 
 
@@ -85,13 +85,14 @@ class Blockies(Dataset):
             (default: ``True``).
     """
 
-    def __init__(self,
-                 root_dir: str,
-                 split: str,
-                 transform: Any = transforms.ToTensor(),
-                 return_attributes: Sequence[str] = ['obj_name'],
-                 return_segmentation_mask: bool = True,
-                 ):
+    def __init__(
+        self,
+        root_dir: str,
+        split: str,
+        transform: Any = transforms.ToTensor(),
+        return_attributes: Sequence[str] = ["obj_name"],
+        return_segmentation_mask: bool = True,
+    ):
         self.root_dir = root_dir
         self.split = split
         self.transform = transform
@@ -110,8 +111,9 @@ class Blockies(Dataset):
 
     def get_dataframe(
         self,
-        to_dict: Callable[[blockies.SceneParameters],
-                          Dict[str, Any]] = filter_attributes
+        to_dict: Callable[
+            [blockies.SceneParameters], Dict[str, Any]
+        ] = filter_attributes,
     ) -> pd.DataFrame:
         """Returns a pandas dataframe of all labels.
 
@@ -145,12 +147,12 @@ class Blockies(Dataset):
         label_names = []
         for attr_name in self._return_attributes:
             attr_value = getattr(params, attr_name)
-            if attr_name == 'obj_name':
+            if attr_name == "obj_name":
                 label_names.append(attr_name)
                 arr.append(params.obj_name_as_int)
             elif utils.supports_iteration(attr_value):
                 for i, item in enumerate(attr_value):
-                    label_names.append(f'{attr_name}_{i}')
+                    label_names.append(f"{attr_name}_{i}")
                     arr.append(item)
             else:
                 label_names.append(attr_name)
@@ -159,10 +161,9 @@ class Blockies(Dataset):
 
     def int_to_obj_name(self, label_int: int) -> str:
         """Returns the ``obj_name`` encoded by the integer."""
-        return {
-            idx: name
-            for name, idx in scene_parameters.OBJ_NAME_TO_INT.items()
-        }[label_int]
+        return {idx: name for name, idx in scene_parameters.OBJ_NAME_TO_INT.items()}[
+            label_int
+        ]
 
     def segmentation_int_to_label(self, index: int) -> str:
         """Return the label of the segmentation mask."""
@@ -176,14 +177,16 @@ class Blockies(Dataset):
         param = self.params[idx]
         fname = param.filename
         img = Image.open(os.path.join(self.root_dir, self.split, fname))
-        img = img.convert('RGB')
+        img = img.convert("RGB")
         if self.transform is not None:
             img = self.transform(img)
 
         _, label_arr = self._scene_parameters_to_flat_array(param)
 
         if self._return_segmentation_mask:
-            mask_img = Image.open(os.path.join(self.root_dir, self.split, param.mask_filename))
+            mask_img = Image.open(
+                os.path.join(self.root_dir, self.split, param.mask_filename)
+            )
             mask = torch.from_numpy(np.array(mask_img)[np.newaxis])
             return img, mask, label_arr
         else:

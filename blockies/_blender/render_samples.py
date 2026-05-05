@@ -3,7 +3,6 @@
 This is invoked interally by ``blockies.blender.render``.
 """
 
-
 import json
 import os
 from pathlib import Path
@@ -31,18 +30,23 @@ def _render_files(param_file: str, save_location: str, save_blender_file: str):
             image_fname = os.path.join(save_location, params.filename)
 
             mask_fname = os.path.join(save_location, params.mask_filename)
-            scene.render(image_fname, mask_fname, )
+            scene.render(
+                image_fname,
+                mask_fname,
+            )
 
             if save_blender_file == "True":
                 scene.save_blender_file(
-                    os.path.join(save_location, f"{params.id}.blender"))
+                    os.path.join(save_location, f"{params.id}.blender")
+                )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     try:
         # starts coverage if tests are running
         # otherwise nothing happens
         import coverage
+
         coverage.process_startup()
     except ImportError:
         pass
