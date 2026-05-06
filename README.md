@@ -1,12 +1,26 @@
-# Blockies: An application-grounded framework for assessing healthy trust in high-stakes human-AI collaboration
+# Blockies: A Parametric Dataset Generator for Human-AI Reliance Studies
+***A synthetic visual diagnosis framework for evaluating XAI-based decision support***
 
 ## Introduction
-**Blockies** is a parametric dataset generator to create images for simulated diagnostic tasks that can be used for assessing human-AI collaboration tools. It extends the approach of the [Two4Two library](https://github.com/mschuessler/two4two), which uses arm position as the only class discriminator, to include multiple customizable traits that can be used as symptoms for the diagnosis of an illness in Blockies called *OCDegen*. This affords human-ai collaboration researchers a more challenging task for high-stakes decision-making.
+**Blockies** is a parametric dataset generator for creating synthetic visual diagnostic tasks to study human-AI reliance and XAI-based decision support. It produces configurable images of virtual creatures with controlled visual traits, diagnostic labels, and model-relevant features, enabling researchers to design experiments that systematically vary task difficulty, dataset bias, AI behavior, and explanation interfaces.
 
+Blockies was developed as part of our research on how task stakes shape reliance on AI-based decision support. If you use this dataset generator or build on the framework, please cite our UMAP publication:
 
+```bibtex
+@inproceedings{johnson2026blockies,
+  title     = {Raising the Stakes: Assessing the Influence of Stakes on User Reliance Behavior in Human-AI Decision-Making},
+  author    = {Johnson, David S.},
+  booktitle = {Proceedings of the 34th ACM Conference on User Modeling, Adaptation and Personalization UMAP ’26)},
+  year      = {2026},
+  publisher = {ACM}
+}
 ```
-To understand the inspiration behind **Blockies**, full details on the original Two4Two dataset can be found in their paper:
-```
+
+**Blockies** extends the [Two4Two library](https://github.com/mschuessler/two4two) by adding multiple customizable traits that can be used as symptoms for diagnosing predefined illnesses. This allows human-AI collaboration researchers to create more challenging visual diagnostic tasks for studying reliance, decision-making, and XAI-based support in simulated high-stakes settings.
+
+The original Two4Two dataset was designed for controlled human-subject evaluations of interpretable machine learning methods using synthetic image data. Full details on Two4Two can be found in the original paper:
+
+```bibtex
 @inproceedings{
     sixt2022do,
     title={Do Users Benefit From Interpretable Vision? A User Study, Baseline, And Dataset},
@@ -18,35 +32,67 @@ To understand the inspiration behind **Blockies**, full details on the original 
 ```
 
 ## Installation
-If you want to generate your own data, follow these instructions.
-Currently, this project is not available through pip but has to be installed manually.
 
+**Blockies** uses [`uv`](https://docs.astral.sh/uv/) for Python package and dependency management.
 
-We suggest creating a python3 or conda environment instead of using your system python.
+### Requirements
 
-```
-python3 -m venv ~/blockies_enviroment
-source ~/blockies_enviroment/bin/activate
-```
+- Python 3.11 or newer
+- `uv`
+- Blender API, downloaded automatically with `--download_blender`
 
-To install the **minimal installation** blockies-haic package change into the cloned directory and run setuptools.
+### 1. Install `uv`
 
-```
-cd blockies-haic
-pip install .
-```
+If you do not already have `uv` installed, install it with:
 
-To install the **installation including all requirements for generating your own training data** run:
-```
-pip install .[example_notebooks_data_generation]
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-To generate the default dataset on your own use the following commands:
-```
-blockies_render_dataset config/color_spher_bias.toml
+Alternative installation methods, including Homebrew, `pip`, and Windows instructions, are available in the official [`uv` installation guide](https://docs.astral.sh/uv/getting-started/installation/).
+
+### 2. Install Blockies dependencies
+
+From the root of the repository, run:
+
+```bash
+uv sync
 ```
 
-## AAAI26 - Submission
-The sampler and scene parameters used to generate the dataset for the AAAI26 submission are available in the `blockies/aaai26` directory.
+This creates a local virtual environment, installs the project dependencies, and syncs them with the lockfile. `uv` will also automatically sync the environment when using `uv run`, but running `uv sync` explicitly is a good first setup step.
 
-Code for downloading and reviewing the datasets can be found in the `aaai26` folder. A Jupyter notebook is also included to review the selection of the datasets for the user study.
+### 3. Check the installation
+
+Run the test script to verify that the package is installed correctly and that Blender is available:
+
+```bash
+./py_test.sh
+```
+
+If needed, make the script executable first:
+
+```bash
+chmod +x py_test.sh
+```
+
+### 4. Run a small test generation
+
+To test the dataset generator with the example configuration, run:
+
+```bash
+uv run blockies-generate --download_blender config/example.toml
+```
+
+The `--download_blender` option downloads Blender automatically if it is not already available.
+
+### 5. Generate the default UMAP dataset
+
+To generate the default dataset configuration used in the UMAP publication, run:
+
+```bash
+uv run blockies-generate config/default_blockies.toml
+```
+
+
+## Usage
+More to come...
