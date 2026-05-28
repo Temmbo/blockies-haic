@@ -66,14 +66,16 @@ This creates a local virtual environment, installs the project dependencies, and
 Run the test script to verify that the package is installed correctly and that Blender is available:
 
 ```bash
-./py_test.sh
+./run_test.sh
 ```
 
 If needed, make the script executable first:
 
 ```bash
-chmod +x py_test.sh
+chmod +x run_test.sh
 ```
+
+(NOTE: Currently, the MyPy checks fail, but this shouldn't stop the code from working as long as the PyTest unit tests all pass.)
 
 ### 4. Run a small test generation
 

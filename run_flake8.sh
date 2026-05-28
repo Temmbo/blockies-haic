@@ -26,4 +26,4 @@ flake8 \
     ./blockies/ \
     || fail
 
-echo -e "${Green}PASSED$Color_Off"
+# echo -e "${Green}PASSED$Color_Off"

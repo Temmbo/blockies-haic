@@ -53,9 +53,27 @@ Color_Off='\033[0m'
 Red='\033[0;31m'
 Green='\033[0;32m'
 
+if [[ "$flake_ret" != "0" ]]; then
+    echo -e "${Red}Flake8 Checks FAILED :($Color_Off"
+else
+    echo -e "${Green}Flake8 Checks PASSED :)$Color_Off"
+fi
+
+if [[ "$mypy_ret" != "0" ]]; then
+    echo -e "${Red}MyPy Checks FAILED :($Color_Off"
+else
+    echo -e "${Green}MyPy Checks PASSED :)$Color_Off"
+fi
+
+if [[ "$pytest_ret" != "0" ]]; then
+    echo -e "${Red}PyTest Unit Tests FAILED :($Color_Off"
+else
+    echo -e "${Green}PyTest Unit Tests PASSED :)$Color_Off"
+fi
+
 if [[ "$exit_code" != "0" ]]; then
-    echo -e "${Red}FAILED :($Color_Off"
+    echo -e "${Red}Overall Checks FAILED :($Color_Off"
     exit 1
 else
-    echo -e "${Green}PASSED :)$Color_Off"
+    echo -e "${Green}Overall Checks PASSED :)$Color_Off"
 fi
