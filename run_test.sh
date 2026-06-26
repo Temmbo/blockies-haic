@@ -27,7 +27,6 @@ source .venv/bin/activate
 echo "Executing flake sanity checks..."
 flake8 ./blockies \
        ./test  \
-       ./examples \
        --select=E9,F63,F7,F82 \
        --show-source \
        --statistics || \

@@ -27,479 +27,468 @@ Distribution = Union[Discrete, _Continuous]
 
 @dataclasses.dataclass()
 class BlockySampler:
-    """Samples the parameters of the ``BlockySceneParameters`` objects.
 
-    Attributes describe how the sampling is done. Concretely they provide the color maps for the
-    object and the background and the distributors from which the value for the scene parameters are
-    drawn.
+  # set the default sampling distributions
+  obj_name: Discrete = utils.discrete({"healthy": 0.25, "overbending":0.25, "bone_degen":0.25, "weak_spine":0.25})
+  num_ill_chars: Discrete = dataclasses.field(
+      default_factory=lambda: {
+          "healthy": utils.discrete({0: 0.25, 1: 0.75}),
+          #"ocd": discrete({2: 0.75, 3: 0.25}),
+          "overbending": utils.discrete({2: 1.0}),
+          "bone_degen": utils.discrete({2: 1.0}),
+          "weak_spine": utils.discrete({2: 1.0}),
+      }
+  )
 
-    Distribution can be: * scipy-distribution from ``scipy.stats`` * callable functions returning a
-    single value * a single (default) value. * a dictionary of all before-mentioned types containing
-    the keys ``healthy``and ``ocd``.
+  ill_markers: dict = dataclasses.field(
+      default_factory=lambda: {
+          "high_bend": 1 / 4.0,
+          "high_sphere_diff": 1 / 4.0,
+          "stretchy": 1 / 4.0,
+          "mutation_mainbones": 1 / 4.0,
+      }
+  )
+  ill_chars: dict = dataclasses.field(init=False)
 
-    These dictionaries are the easiest way to implement a bias. If you want an attribute to be
-    sampled diffrently based on wheter it shows a healthy or ocd Blocky, it is usually sufficient to
-    change these dictionaries. See ``ColorBiasedSampler`` in the main Two4Two ``bias.py`` as an example.
+  # set up main and secondary bones
+  main_spherical: Continuous = scipy.stats.beta(0.3, 0.3)
+  sec_spherical: Continuous = utils.truncated_normal(
+          mean=0.4, std=0.10, lower=0.05, upper=0.45
+      )
+  sec_bones: str = dataclasses.field(init=False)
 
-    To implement more complex biases, you can inherit this class and modify how individual
-    attributes are sampled, e.g., by introducing additional dependencies. Usually the best approach
-    is to overwrite the sampling method (e.g. ``sample_obj_rotation_pitch``) and modify the sampling
-    to be dependent on other attributes. Please be aware that you will then also need to implement
-    interventional sampling, because in addition to sampling new parameters, we also want to
-    control an attribute sometimes. That means that we set the attribute to a specific value
-    independent of the usual dependencies. If the intervention flag is true, the parameter should be
-    sampled independent of any other attribute. For example, if the object color (obj_color)
-    depends on the Healhty/OCD variable, it would need to be sampled independent
-    if intervention = True
+  bending: Continuous = utils.truncated_normal(
+      mean=0.15, std=0.075, lower=0, upper=0.20
+  )
+  arm_position: Continuous = utils.truncated_normal(
+      mean=0.475, std=0.1, lower=0, upper=0.49
+  )
+  labeling_error: Discrete = utils.discrete({True: 0.0, False: 1.0})
+  obj_rotation_roll: Continuous = utils.truncated_normal(
+          0, 0.03 * np.pi / 4, *utils.QUARTER_CIRCLE
+      )
+  obj_rotation_pitch: Continuous = utils.truncated_normal(
+      0, 0.3 * np.pi / 4, *utils.QUARTER_CIRCLE
+  )
+  obj_rotation_yaw: Continuous = scipy.stats.uniform(-np.pi, np.pi)
+  fliplr: Discrete = utils.discrete({True: 0.0, False: 1.0})
+  position_x: Continuous = scipy.stats.uniform(-0.8, 0.8)
+  position_y: Continuous = scipy.stats.uniform(-0.8, 0.8)
+  obj_color: Continuous = scipy.stats.uniform(0.0, 1.0)
+  bg_color: Continuous = scipy.stats.uniform(0.05, 0.90)
+  bg_color_map: str = "coolwarm"
+  obj_color_map: str = "coolwarm"
 
-    For the valid values ranges, see ``BlockySceneParameters.VALID_VALUES``.
 
-    Attrs:
-        bg_color_map: used color map for the background.
-        obj_color_map: used color map for the object.
-        spherical: distribution of ``BlockySceneParameters.spherical``.
-        bending: distribution of ``BlockySceneParameters.bending``.
-        obj_name: distribution of ``BlockySceneParameters.obj_name``.
-        arm_position: distribution of ``BlockySceneParameters.arm_position_x`` and
-            ``BlockySceneParameters.arm_position_y``
-        labeling_error: distribution of ``BlockySceneParameters.labeling_error``.
-        obj_rotation_roll: distribution of ``BlockySceneParameters.obj_rotation_roll``.
-        obj_rotation_pitch:distribution of ``BlockySceneParameters.obj_rotation_pitch``.
-        obj_rotation_yaw:distribution of ``BlockySceneParameters.obj_rotation_pitch``.
-        fliplr: distribution of ``BlockySceneParameters.fliplr``.
-        position: distribution of ``BlockySceneParameters.position``.
-        obj_color: distribution of ``BlockySceneParameters.obj_color``.
-        bg_color: distribution of ``BlockySceneParameters.bg_color``.
-    """
-
-    # set the default sampling distributions
-    obj_name: Discrete = utils.discrete({"healthy": 0.5, "ocd": 0.5})
-    num_ill_chars: Discrete = dataclasses.field(
-        default_factory=lambda: {
-            "healthy": utils.discrete({0: 0.25, 1: 0.75}),
-            "ocd": utils.discrete({2: 0.75, 3: 0.25}),
-        }
-    )
-
-    ill_markers: dict = dataclasses.field(
-        default_factory=lambda: {
-            "high_bend": 1 / 4.0,
-            "high_sphere_diff": 1 / 4.0,
-            "stretchy": 1 / 4.0,
-            "mutation_mainbones": 1 / 4.0,
-        }
-    )
-    ill_chars: dict = dataclasses.field(init=False)
-
-    # set up main and secondary bones
-    main_spherical: Continuous = scipy.stats.beta(0.3, 0.3)
-    sec_spherical: Continuous = utils.truncated_normal(
-        mean=0.4, std=0.10, lower=0.05, upper=0.45
-    )
-    sec_bones: str = dataclasses.field(init=False)
-
-    bending: Continuous = utils.truncated_normal(
-        mean=0.15, std=0.075, lower=0, upper=0.20
-    )
-    arm_position: Continuous = utils.truncated_normal(
-        mean=0.475, std=0.1, lower=0, upper=0.49
-    )
-    labeling_error: Discrete = utils.discrete({True: 0.0, False: 1.0})
-    obj_rotation_roll: Continuous = utils.truncated_normal(
-        0, 0.03 * np.pi / 4, *utils.QUARTER_CIRCLE
-    )
-    obj_rotation_pitch: Continuous = utils.truncated_normal(
-        0, 0.3 * np.pi / 4, *utils.QUARTER_CIRCLE
-    )
-    obj_rotation_yaw: Continuous = scipy.stats.uniform(-np.pi, np.pi)
-    fliplr: Discrete = utils.discrete({True: 0.0, False: 1.0})
-    position_x: Continuous = scipy.stats.uniform(-0.8, 0.8)
-    position_y: Continuous = scipy.stats.uniform(-0.8, 0.8)
-    obj_color: Continuous = scipy.stats.uniform(0.0, 1.0)
-    bg_color: Continuous = scipy.stats.uniform(0.05, 0.90)
-    bg_color_map: str = "coolwarm"
-    obj_color_map: str = "coolwarm"
-
-    def __post_init__(self):
+  def __post_init__(self):
         # TODO: remove this as, I think self.ill_chars doesn't need to be initialized here, since num_ill_chars
         # must be sampled first
-        values = list(self.ill_markers.keys())
-        probs = list(self.ill_markers.values())
-        self.ill_chars = {
-            "healthy": utils.multiple_choice(values=values, probs=probs, size=1),
-            "ocd": utils.multiple_choice(values=values, probs=probs, size=2),
-        }
-        self.sec_bones_options = ("001", "010", "100", "011", "101", "110", "111")
-        self.sec_bones: Discrete = utils.discrete(
-            {o: 1 / len(self.sec_bones_options) for o in self.sec_bones_options}
-        )
+      values = list(self.ill_markers.keys())
+      probs = list(self.ill_markers.values())
+      self.ill_chars = {
+          "healthy": utils.multiple_choice(values=values, probs=probs, size=1),
+          "overbending": ("high_bend", "stretchy"),
+          "bone_degen": ("mutation_mainbones", "high_sphere_diff"),
+          "weak_spine": ("high_bend", "mutation_mainbones"),
+      }
+      self.sec_bones_options = ("001", "010", "100", "011", "101", "110", "111")
+      self.sec_bones: Discrete = utils.discrete(
+          {o: 1 / len(self.sec_bones_options) for o in self.sec_bones_options}
+      )
+  def sample_obj_name(self, params: SceneParameters):
+    """Samples the ``obj_name``."""
+    params.obj_name = self._sample(None, self.obj_name)
+    params.mark_sampled("obj_name")
 
-    def sample(self, obj_name: Optional[str] = None) -> SceneParameters:
-        """Returns a new BlockySceneParameters with random values.
+  def sample_labeling_error(
+      self, params: SceneParameters, intervention: bool = False
+      ):
+    """Samples the ``labeling_error``.
 
-        If you create your own biased sampled dataset by inheriting from this class,
-        you might want to change the order of how attributes are set.
-        For example, if you want that ``obj_rotation_pitch`` should depend on the
-        ``arm_position``then you should also sample the ``arm_position`` first.
-        However, it is highly recommended to sample the object name first, as
-        the sampling of the attribute might be dependent on the label
-        (see the explanation of distributions in class description)
+    Attrs:
+        params: BlockySceneParameters for which the labeling_error is sampled and updated in place.
+        intervention: Flag whether interventional sampling is applied. Details: see class docu.
+    """
+    obj_name = self._sample_name() if intervention else params.obj_name
+    params.labeling_error = self._sample(obj_name, self.labeling_error)
+    params.mark_sampled("labeling_error")
 
-        Attrs:
-            obj_name: Overides the sampled obj_name with the given namen. Usally only useful for
-                manual sampling. Not recommeded when samplign larger sets.
-        """
-        params = SceneParameters()
-        self.sample_obj_name(params)
-        # The name flag allows to overide the sampling result. The sampling is still executed to
-        # trigger any custom functionality that might be implented in subclasses.
-        if obj_name and params.obj_name != obj_name:
-            params.obj_name = obj_name
+  def sample_num_ill_chars(self, params: SceneParameters):
+    """Samples the number of ill characteristics to use for Blocky sampling disributions."""
+    params.num_ill_chars = self._sample(params.obj_name, self.num_ill_chars)
+    params.mark_sampled("num_ill_chars")
 
-        self.sample_num_ill_chars(params)
-        self.sample_ill_chars(params)
-        self.sample_labeling_error(params)
-        self.sample_main_spherical(params)
-        self.sample_sec_spherical(params)
-        self.sample_sec_bones(params)
-        self.sample_bending(params)
-        self.sample_arm_position(params)
-        self.sample_rotation(params)
-        self.sample_fliplr(params)
-        self.sample_position(params)
-        self.sample_color(params)
-        params.check_values()
-        return params
+  def sample_ill_chars(
+      self, params: SceneParameters, intervention: bool = False
+      ) -> str:
+      """Samples the ill characteristics to use for Blocky sampling disributions.
 
-    @staticmethod
-    def _sample(obj_name: Optional[str], dist: Distribution, size: int = 1) -> Any:
-        """Samples values from the distributon according to its type.
+      Attrs:
+          params: BlockySceneParameters for which the ill state is sampled and updated in place.
+          intervention: Flag whether interventional sampling is applied. Details: see class docu.
+      """
+      obj_name = self._sample_name() if intervention else params.obj_name
+      num_ill_chars = params.num_ill_chars
 
-        The default number of values sampled is one, which can be changed with flag size.
+      assert num_ill_chars < 2 if obj_name == "healthy" else num_ill_chars <= 3, (
+          f"Invalid number of ill characteristics, {num_ill_chars} for the given obj_name {obj_name}"
+          )
 
-        Distribution can be:
-        * scipy-distribution from ``scipy.stats``
-        * callable functions returning a single value
-        * a single (default) value.
-        * a dictionary of all before-mentioned types containing the keys ``peaky``and ``stretchy``.
+    #   match obj_name:
+    #     case "healthy":
+    #       values = list(self.ill_markers.keys())
+    #       probs = list(self.ill_markers.values())
+    #       char_sampler = utils.multiple_choice(
+    #           values=values, probs=probs, size=num_ill_chars
+    #           )
+    #       ill_chars = tuple(char_sampler().tolist())
+    #       params.ill_chars = ill_chars
+    #     case "overbending":
+    #       params.ill_chars = ("high_bend", "stretchy")
+    #     case "bone_degen":
+    #       params.ill_chars = ("mutation_mainbones", "high_sphere_diff")
+    #     case "weak_spine":
+    #       params.ill_chars = ("high_bend", "mutation_mainbones")
 
-        Will unpack np.ndarray, list, or tuple with a single element returned by distribution.
-
-        """
-
-        if size > 1:
-            return tuple(
-                [BlockySampler._sample(obj_name, dist) for i in range(0, size)]
-            )
-
-        if isinstance(dist, dict):
-            # Rare edge case: If a dictionary was passed without the obj_name key
-            # then the first distribution from the dictionary is used.
-            if obj_name is None:
-                dist = next(iter(dist.values()))
-            else:
-                dist = dist[obj_name]
-
-        if hasattr(dist, "rvs"):
-            value = dist.rvs()  # type: ignore
-        elif callable(dist):
-            value = dist()
-        else:
-            value = dist
-
-        # Unpacking float values contained in numpyarrays and list
-        if type(value) in (list, tuple):
-            if len(value) != 1:
-                raise ValueError(
-                    f"Expected a single element. \
-                 Got {type(value)} of size {len(value)}!"
+        #replace match with elifs
+      if obj_name == "healthy":
+            values = list(self.ill_markers.keys())
+            probs = list(self.ill_markers.values())
+            char_sampler = utils.multiple_choice(
+                values=values, probs=probs, size=num_ill_chars
                 )
-            else:
-                value = value[0]
+            ill_chars = tuple(char_sampler().tolist())
+            params.ill_chars = ill_chars
+      elif obj_name == "overbending":
+            params.ill_chars = ("high_bend", "stretchy")
+      elif obj_name == "bone_degen":
+            params.ill_chars = ("mutation_mainbones", "high_sphere_diff")
+      elif obj_name == "weak_spine":
+            params.ill_chars = ("high_bend", "mutation_mainbones")
 
-        if isinstance(value, np.ndarray):
-            value = utils.numpy_to_python_scalar(value)
+      params.mark_sampled("ill_chars")
 
-        return value
 
-    def sample_obj_name(self, params: SceneParameters):
-        """Samples the ``obj_name``."""
-        params.obj_name = self._sample(None, self.obj_name)
-        params.mark_sampled("obj_name")
+  # TODO: research how to decorate function with trait based distributions for more flexibility
+  def sample_main_spherical(
+      self, params: SceneParameters, intervention: bool = False
+      ):
+    """Samples the shape of the main bones.
 
-    def sample_labeling_error(
-        self, params: SceneParameters, intervention: bool = False
+    Attrs:
+        params: BlockySceneParameters for which the ill state is sampled and updated in place.
+        intervention: Flag whether interventional sampling is applied. Details: see class docu.
+    """
+    obj_name = self._sample_name() if intervention else params.obj_name
+
+    mutation_dist = utils.truncated_normal(1.15, 0.025, 1.11, 1.22)
+    dist = (
+        mutation_dist
+        if "mutation_mainbones" in params.ill_chars
+        else self.main_spherical
+        )
+    params.main_spherical = self._sample(obj_name, dist)
+    params.mark_sampled("main_spherical")
+
+    # TODO: how to better handle this function
+  def sample_sec_spherical(self, params: SceneParameters, intervention: bool = False):
+    """Samples the shape of the secondary bones.
+
+    Attrs:
+        params: BlockySceneParameters for which the ill state is sampled and updated in place.
+        intervention: Flag whether interventional sampling is applied. Details: see class docu.
+    """
+    obj_name = self._sample_name() if intervention else params.obj_name
+
+    high_sphere_dist = utils.truncated_normal(
+        mean=0.55, std=0.1, lower=0.50, upper=0.75
+        )
+
+    dist = (
+        high_sphere_dist
+        if "high_sphere_diff" in params.ill_chars
+        else self.sec_spherical
+        )
+
+    sphere_diff = -1
+    new_val = -1
+    while new_val < 0 or new_val > 1.22:
+      sphere_diff = self._sample(obj_name, dist)
+      dir = np.random.choice([-1, 1])
+      new_val = params.main_spherical + sphere_diff * dir
+
+      params.sec_spherical = new_val
+      params.mark_sampled("sec_spherical")
+
+  def sample_sec_bones(self, params: SceneParameters, intervention: bool = False):
+    """Samples the number of secondary bones.
+
+    Attrs:
+        params: BlockySceneParameters for which the ill state is sampled and updated in place.
+        intervention: Flag whether interventional sampling is applied. Details: see class docu.
+    """
+    obj_name = self._sample_name() if intervention else params.obj_name
+    params.sec_bones = self._sample(obj_name, self.sec_bones)
+    params.mark_sampled("sec_bones")
+
+  def sample_bending(self, params: SceneParameters, intervention: bool = False):
+    """Samples the bending of the bones.
+
+    Attrs:
+        params: BlockySceneParameters for which the ill state is sampled and updated in place.
+        intervention: Flag whether interventional sampling is applied. Details: see class docu.
+    """
+
+    obj_name = self._sample_name() if intervention else params.obj_name
+
+    high_bend_dist = utils.truncated_normal(
+        mean=0.25, std=0.075, lower=0.20, upper=0.3926
+        )
+
+    dist = high_bend_dist if "high_bend" in params.ill_chars else self.bending
+    params.bending = self._sample(obj_name, dist)
+    params.mark_sampled("bending")
+
+  def sample_arm_position(self, params: SceneParameters, intervention: bool = False):
+    """Samples the arm position.
+
+    Attrs:
+        params: BlockySceneParameters for which the ill state is sampled and updated in place.
+        intervention: Flag whether interventional sampling is applied. Details: see class docu.
+    """
+    obj_name = self._sample_name() if intervention else params.obj_name
+
+    stretchy_dist = utils.truncated_normal(
+        mean=0.525, std=0.1, lower=0.51, upper=1.0
+        )
+    dist = stretchy_dist if "stretchy" in params.ill_chars else self.arm_position
+    params.arm_position = self._sample(obj_name, dist)
+    params.mark_sampled("arm_position")
+
+  def sample_rotation(self, params: SceneParameters, intervention: bool = False):
+    """Convienience function bundeling all object rotation functions by calling them.
+
+    Attrs:
+        params: BlockySceneParameters for which the object inclination is sampled and updated.
+        intervention: Flag whether interventional sampling is applied. Details: see class docu.
+    """
+    self.sample_obj_rotation_roll(params, intervention=intervention)
+    self.sample_obj_rotation_pitch(params, intervention=intervention)
+    self.sample_obj_rotation_yaw(params, intervention=intervention)
+
+  def sample_obj_rotation_roll(
+      self, params: SceneParameters, intervention: bool = False
+      ):
+    """Samples the ``obj_rotation_roll``.
+
+    Attrs:
+        params: BlockySceneParameters for which the object inclination is sampled and updated.
+        intervention: Flag whether interventional sampling is applied. Details: see class docu.
+    """
+    obj_name = self._sample_name() if intervention else params.obj_name
+    params.obj_rotation_roll = self._sample(obj_name, self.obj_rotation_roll)
+    params.mark_sampled("obj_rotation_roll")
+
+  def sample_obj_rotation_pitch(
+      self, params: SceneParameters, intervention: bool = False
+      ):
+    """Samples the ``obj_rotation_pitch``.
+
+    Attrs:
+        params: BlockySceneParameters for which the rotation is sampled and updated in place.
+        intervention: Flag whether interventional sampling is applied. Details: see class docu.
+    """
+    obj_name = self._sample_name() if intervention else params.obj_name
+    params.obj_rotation_pitch = self._sample(obj_name, self.obj_rotation_pitch)
+    params.mark_sampled("obj_rotation_pitch")
+
+  def sample_obj_rotation_yaw(
+    self, params: SceneParameters, intervention: bool = False
     ):
-        """Samples the ``labeling_error``.
+    """Samples the ``obj_rotation_yaw``.
 
-        Attrs:
-            params: BlockySceneParameters for which the labeling_error is sampled and updated in place.
-            intervention: Flag whether interventional sampling is applied. Details: see class docu.
-        """
-        obj_name = self._sample_name() if intervention else params.obj_name
-        params.labeling_error = self._sample(obj_name, self.labeling_error)
-        params.mark_sampled("labeling_error")
+    Attrs:
+        params: BlockySceneParameters for which the rotation is sampled and updated in place.
+        intervention: Flag whether interventional sampling is applied. Details: see class docu.
+    """
+    obj_name = self._sample_name() if intervention else params.obj_name
+    params.obj_rotation_yaw = self._sample(obj_name, self.obj_rotation_yaw)
+    params.mark_sampled("obj_rotation_yaw")
 
-    def sample_num_ill_chars(self, params: SceneParameters):
-        """Samples the number of ill characteristics to use for Blocky sampling disributions."""
-        params.num_ill_chars = self._sample(params.obj_name, self.num_ill_chars)
-        params.mark_sampled("num_ill_chars")
+  def sample_fliplr(self, params: SceneParameters, intervention: bool = False):
+    """Samples the ``fliplr``.
 
-    def sample_ill_chars(
-        self, params: SceneParameters, intervention: bool = False
-    ) -> str:
-        """Samples the ill characteristics to use for Blocky sampling disributions.
+    Attrs:
+        params: BlockySceneParameters for which the fliping (left/right) is sampled and updated.
+        intervention: Flag whether interventional sampling is applied. Details: see class docu.
+    """
+    obj_name = self._sample_name() if intervention else params.obj_name
+    params.fliplr = self._sample(obj_name, self.fliplr)
+    params.mark_sampled("fliplr")
 
-        Attrs:
-            params: BlockySceneParameters for which the ill state is sampled and updated in place.
-            intervention: Flag whether interventional sampling is applied. Details: see class docu.
-        """
-        obj_name = self._sample_name() if intervention else params.obj_name
-        num_ill_chars = params.num_ill_chars
+  def sample_position(self, params: SceneParameters, intervention: bool = False):
+    """Convienience function calling ``sample_position_x`` and ``sample_position_y``.
 
-        assert num_ill_chars < 2 if obj_name == "healthy" else num_ill_chars <= 3, (
-            f"Invalid number of ill characteristics, {num_ill_chars} for the given obj_name {obj_name}"
-        )
+    Attrs:
+        params: BlockySceneParameters for which the position is sampled and updated in place.
+        intervention: Flag whether interventional sampling is applied. Details: see class docu.
+    """
+    self.sample_position_x(params, intervention=intervention)
+    self.sample_position_y(params, intervention=intervention)
 
-        values = list(self.ill_markers.keys())
-        probs = list(self.ill_markers.values())
-        char_sampler = utils.multiple_choice(
-            values=values, probs=probs, size=num_ill_chars
-        )
+  def sample_position_x(self, params: SceneParameters, intervention: bool = False):
+    """Samples the ``position_x`` of the object.
 
-        ill_chars = tuple(char_sampler().tolist())
-        params.ill_chars = ill_chars
+    Attrs:
+        params: BlockySceneParameters for which the position is sampled and updated in place.
+        intervention: Flag whether interventional sampling is applied. Details: see class docu.
+    """
+    obj_name = self._sample_name() if intervention else params.obj_name
+    params.position_x = self._sample(obj_name, self.position_x)
+    params.mark_sampled("position_x")
 
-        params.mark_sampled("ill_chars")
+  def sample_position_y(self, params: SceneParameters, intervention: bool = False):
+    """Samples ``position_y`` of the object.
 
-    # todo: research how to decorate function with trait based distributions for more flexibility
-    def sample_main_spherical(
-        self, params: SceneParameters, intervention: bool = False
-    ):
-        """Samples the shape of the main bones.
+    Attrs:
+        params: BlockySceneParameters for which the position is sampled and updated in place.
+        intervention: Flag whether interventional sampling is applied. Details: see class docu.
+    """
+    obj_name = self._sample_name() if intervention else params.obj_name
+    params.position_y = self._sample(obj_name, self.position_y)
+    params.mark_sampled("position_y")
 
-        Attrs:
-            params: BlockySceneParameters for which the ill state is sampled and updated in place.
-            intervention: Flag whether interventional sampling is applied. Details: see class docu.
-        """
-        obj_name = self._sample_name() if intervention else params.obj_name
+  def _object_cmap(self, params: SceneParameters) -> mpl.colors.Colormap:
+    return plt.get_cmap(self.obj_color_map)
 
-        mutation_dist = utils.truncated_normal(1.15, 0.025, 1.11, 1.22)
-        dist = (
-            mutation_dist
-            if "mutation_mainbones" in params.ill_chars
-            else self.main_spherical
-        )
-        params.main_spherical = self._sample(obj_name, dist)
-        params.mark_sampled("main_spherical")
+  def sample_color(self, params: SceneParameters, intervention: bool = False):
+    """Convienience function calling ``sample_obj_color`` and ``sample_bg_color``.
 
-    # todo: how to better handle this function
-    def sample_sec_spherical(self, params: SceneParameters, intervention: bool = False):
-        """Samples the shape of the secondary bones.
+    Attrs:
+        params: BlockySceneParameters for which the position is sampled and updated in place.
+        intervention: Flag whether interventional sampling is applied. Details: see class docu.
+    """
+    self.sample_obj_color(params, intervention=intervention)
+    self.sample_bg_color(params, intervention=intervention)
 
-        Attrs:
-            params: BlockySceneParameters for which the ill state is sampled and updated in place.
-            intervention: Flag whether interventional sampling is applied. Details: see class docu.
-        """
-        obj_name = self._sample_name() if intervention else params.obj_name
+  def sample_obj_color(self, params: SceneParameters, intervention: bool = False):
+    """Samples the ``obj_color`` and ``obj_color_rgba``.
 
-        high_sphere_dist = utils.truncated_normal(
-            mean=0.55, std=0.1, lower=0.50, upper=0.75
-        )
+    Attrs:
+        params: BlockySceneParameters for which the obj_color is sampled and updated in place.
+        intervention: Flag whether interventional sampling is applied. Details: see class docu.
+    """
+    obj_name = self._sample_name() if intervention else params.obj_name
+    params.obj_color = float(self._sample(obj_name, self.obj_color))
+    params.obj_color_rgba = tuple(self._object_cmap(params)(params.obj_color))  # type: ignore
+    params.mark_sampled("obj_color")
 
-        dist = (
-            high_sphere_dist
-            if "high_sphere_diff" in params.ill_chars
-            else self.sec_spherical
-        )
+  def _bg_cmap(self, params: SceneParameters) -> mpl.colors.Colormap:
+    return plt.get_cmap(self.bg_color_map)
 
-        sphere_diff = -1
-        new_val = -1
-        while new_val < 0 or new_val > 1.22:
-            sphere_diff = self._sample(obj_name, dist)
-            dir = np.random.choice([-1, 1])
-            new_val = params.main_spherical + sphere_diff * dir
+  def sample_bg_color(self, params: SceneParameters, intervention: bool = False):
+    """Samples the ``bg_color_rgba`` and ``bg_color``.
 
-        params.sec_spherical = new_val
-        params.mark_sampled("sec_spherical")
+    Attrs:
+        params: BlockySceneParameters for which the labeling_error is sampled and updated in place.
+        intervention: Flag whether interventional sampling is applied. Details: see class docu.
+    """
+    obj_name = self._sample_name() if intervention else params.obj_name
+    params.bg_color = float(self._sample(obj_name, self.bg_color))
+    params.bg_color_rgba = tuple(self._bg_cmap(params)(params.bg_color))  # type: ignore
+    params.mark_sampled("bg_color")
 
-    def sample_sec_bones(self, params: SceneParameters, intervention: bool = False):
-        """Samples the number of secondary bones.
+  def sample(self, obj_name: Optional[str] = None) -> SceneParameters:
+    """Returns a new BlockySceneParameters with random values.
 
-        Attrs:
-            params: BlockySceneParameters for which the ill state is sampled and updated in place.
-            intervention: Flag whether interventional sampling is applied. Details: see class docu.
-        """
-        obj_name = self._sample_name() if intervention else params.obj_name
-        params.sec_bones = self._sample(obj_name, self.sec_bones)
-        params.mark_sampled("sec_bones")
+    If you create your own biased sampled dataset by inheriting from this class,
+    you might want to change the order of how attributes are set.
+    For example, if you want that ``obj_rotation_pitch`` should depend on the
+    ``arm_position``then you should also sample the ``arm_position`` first.
+    However, it is highly recommended to sample the object name first, as
+    the sampling of the attribute might be dependent on the label
+    (see the explanation of distributions in class description)
 
-    def sample_bending(self, params: SceneParameters, intervention: bool = False):
-        """Samples the bending of the bones.
+    Attrs:
+    obj_name: Overides the sampled obj_name with the given namen. Usally only useful for
+    manual sampling. Not recommeded when samplign larger sets.
+    """
+    params = SceneParameters()
+    self.sample_obj_name(params)
+    # The name flag allows to overide the sampling result. The sampling is still executed to
+    # trigger any custom functionality that might be implented in subclasses.
+    if obj_name and params.obj_name != obj_name:
+      params.obj_name = obj_name
 
-        Attrs:
-            params: BlockySceneParameters for which the ill state is sampled and updated in place.
-            intervention: Flag whether interventional sampling is applied. Details: see class docu.
-        """
+    self.sample_num_ill_chars(params)
+    self.sample_ill_chars(params)
+    self.sample_labeling_error(params)
+    self.sample_main_spherical(params)
+    self.sample_sec_spherical(params)
+    self.sample_sec_bones(params)
+    self.sample_bending(params)
+    self.sample_arm_position(params)
+    self.sample_rotation(params)
+    self.sample_fliplr(params)
+    self.sample_position(params)
+    self.sample_color(params)
+    params.check_values()
+    #print(params)
+    #print out the sampling status of all attributes for debugging
+    #for attr, status in params._attributes_status.items():
+    #   print(f"{attr}: {status}")
+    return params
 
-        obj_name = self._sample_name() if intervention else params.obj_name
+  @staticmethod
+  def _sample(obj_name: Optional[str], dist: Distribution, size: int = 1) -> Any:
+      """Samples values from the distributon according to its type.
 
-        high_bend_dist = utils.truncated_normal(
-            mean=0.25, std=0.075, lower=0.20, upper=0.3926
-        )
+      The default number of values sampled is one, which can be changed with flag size.
 
-        dist = high_bend_dist if "high_bend" in params.ill_chars else self.bending
-        params.bending = self._sample(obj_name, dist)
-        params.mark_sampled("bending")
+      Distribution can be:
+      * scipy-distribution from ``scipy.stats``
+      * callable functions returning a single value
+      * a single (default) value.
+      * a dictionary of all before-mentioned types containing the keys ``peaky``and ``stretchy``.
 
-    def sample_arm_position(self, params: SceneParameters, intervention: bool = False):
-        """Samples the arm position.
+      Will unpack np.ndarray, list, or tuple with a single element returned by distribution.
 
-        Attrs:
-            params: BlockySceneParameters for which the ill state is sampled and updated in place.
-            intervention: Flag whether interventional sampling is applied. Details: see class docu.
-        """
-        obj_name = self._sample_name() if intervention else params.obj_name
+      """
 
-        stretchy_dist = utils.truncated_normal(
-            mean=0.525, std=0.1, lower=0.51, upper=1.0
-        )
-        dist = stretchy_dist if "stretchy" in params.ill_chars else self.arm_position
-        params.arm_position = self._sample(obj_name, dist)
-        params.mark_sampled("arm_position")
+      if size > 1:
+          return tuple(
+              [BlockySampler._sample(obj_name, dist) for i in range(0, size)]
+          )
 
-    def sample_rotation(self, params: SceneParameters, intervention: bool = False):
-        """Convienience function bundeling all object rotation functions by calling them.
+      if isinstance(dist, dict):
+          # Rare edge case: If a dictionary was passed without the obj_name key
+          # then the first distribution from the dictionary is used.
+          if obj_name is None:
+              dist = next(iter(dist.values()))
+          else:
+              dist = dist[obj_name]
 
-        Attrs:
-            params: BlockySceneParameters for which the object inclination is sampled and updated.
-            intervention: Flag whether interventional sampling is applied. Details: see class docu.
-        """
-        self.sample_obj_rotation_roll(params, intervention=intervention)
-        self.sample_obj_rotation_pitch(params, intervention=intervention)
-        self.sample_obj_rotation_yaw(params, intervention=intervention)
+      if hasattr(dist, "rvs"):
+          value = dist.rvs()  # type: ignore
+      elif callable(dist):
+          value = dist()
+      else:
+          value = dist
 
-    def sample_obj_rotation_roll(
-        self, params: SceneParameters, intervention: bool = False
-    ):
-        """Samples the ``obj_rotation_roll``.
+      # Unpacking float values contained in numpyarrays and list
+      if type(value) in (list, tuple):
+          if len(value) != 1:
+              raise ValueError(
+                  f"Expected a single element. \
+               Got {type(value)} of size {len(value)}!"
+              )
+          else:
+              value = value[0]
 
-        Attrs:
-            params: BlockySceneParameters for which the object inclination is sampled and updated.
-            intervention: Flag whether interventional sampling is applied. Details: see class docu.
-        """
-        obj_name = self._sample_name() if intervention else params.obj_name
-        params.obj_rotation_roll = self._sample(obj_name, self.obj_rotation_roll)
-        params.mark_sampled("obj_rotation_roll")
+      if isinstance(value, np.ndarray):
+          value = utils.numpy_to_python_scalar(value)
 
-    def sample_obj_rotation_pitch(
-        self, params: SceneParameters, intervention: bool = False
-    ):
-        """Samples the ``obj_rotation_pitch``.
-
-        Attrs:
-            params: BlockySceneParameters for which the rotation is sampled and updated in place.
-            intervention: Flag whether interventional sampling is applied. Details: see class docu.
-        """
-        obj_name = self._sample_name() if intervention else params.obj_name
-        params.obj_rotation_pitch = self._sample(obj_name, self.obj_rotation_pitch)
-        params.mark_sampled("obj_rotation_pitch")
-
-    def sample_obj_rotation_yaw(
-        self, params: SceneParameters, intervention: bool = False
-    ):
-        """Samples the ``obj_rotation_yaw``.
-
-        Attrs:
-            params: BlockySceneParameters for which the rotation is sampled and updated in place.
-            intervention: Flag whether interventional sampling is applied. Details: see class docu.
-        """
-        obj_name = self._sample_name() if intervention else params.obj_name
-        params.obj_rotation_yaw = self._sample(obj_name, self.obj_rotation_yaw)
-        params.mark_sampled("obj_rotation_yaw")
-
-    def sample_fliplr(self, params: SceneParameters, intervention: bool = False):
-        """Samples the ``fliplr``.
-
-        Attrs:
-            params: BlockySceneParameters for which the fliping (left/right) is sampled and updated.
-            intervention: Flag whether interventional sampling is applied. Details: see class docu.
-        """
-        obj_name = self._sample_name() if intervention else params.obj_name
-        params.fliplr = self._sample(obj_name, self.fliplr)
-        params.mark_sampled("fliplr")
-
-    def sample_position(self, params: SceneParameters, intervention: bool = False):
-        """Convienience function calling ``sample_position_x`` and ``sample_position_y``.
-
-        Attrs:
-            params: BlockySceneParameters for which the position is sampled and updated in place.
-            intervention: Flag whether interventional sampling is applied. Details: see class docu.
-        """
-        self.sample_position_x(params, intervention=intervention)
-        self.sample_position_y(params, intervention=intervention)
-
-    def sample_position_x(self, params: SceneParameters, intervention: bool = False):
-        """Samples the ``position_x`` of the object.
-
-        Attrs:
-            params: BlockySceneParameters for which the position is sampled and updated in place.
-            intervention: Flag whether interventional sampling is applied. Details: see class docu.
-        """
-        obj_name = self._sample_name() if intervention else params.obj_name
-        params.position_x = self._sample(obj_name, self.position_x)
-        params.mark_sampled("position_x")
-
-    def sample_position_y(self, params: SceneParameters, intervention: bool = False):
-        """Samples ``position_y`` of the object.
-
-        Attrs:
-            params: BlockySceneParameters for which the position is sampled and updated in place.
-            intervention: Flag whether interventional sampling is applied. Details: see class docu.
-        """
-        obj_name = self._sample_name() if intervention else params.obj_name
-        params.position_y = self._sample(obj_name, self.position_y)
-        params.mark_sampled("position_y")
-
-    def _object_cmap(self, params: SceneParameters) -> mpl.colors.Colormap:
-        return plt.get_cmap(self.obj_color_map)
-
-    def sample_color(self, params: SceneParameters, intervention: bool = False):
-        """Convienience function calling ``sample_obj_color`` and ``sample_bg_color``.
-
-        Attrs:
-            params: BlockySceneParameters for which the position is sampled and updated in place.
-            intervention: Flag whether interventional sampling is applied. Details: see class docu.
-        """
-        self.sample_obj_color(params, intervention=intervention)
-        self.sample_bg_color(params, intervention=intervention)
-
-    def sample_obj_color(self, params: SceneParameters, intervention: bool = False):
-        """Samples the ``obj_color`` and ``obj_color_rgba``.
-
-        Attrs:
-            params: BlockySceneParameters for which the obj_color is sampled and updated in place.
-            intervention: Flag whether interventional sampling is applied. Details: see class docu.
-        """
-        obj_name = self._sample_name() if intervention else params.obj_name
-        params.obj_color = float(self._sample(obj_name, self.obj_color))
-        params.obj_color_rgba = tuple(self._object_cmap(params)(params.obj_color))  # type: ignore
-        params.mark_sampled("obj_color")
-
-    def _bg_cmap(self, params: SceneParameters) -> mpl.colors.Colormap:
-        return plt.get_cmap(self.bg_color_map)
-
-    def sample_bg_color(self, params: SceneParameters, intervention: bool = False):
-        """Samples the ``bg_color_rgba`` and ``bg_color``.
-
-        Attrs:
-            params: BlockySceneParameters for which the labeling_error is sampled and updated in place.
-            intervention: Flag whether interventional sampling is applied. Details: see class docu.
-        """
-        obj_name = self._sample_name() if intervention else params.obj_name
-        params.bg_color = float(self._sample(obj_name, self.bg_color))
-        params.bg_color_rgba = tuple(self._bg_cmap(params)(params.bg_color))  # type: ignore
-        params.mark_sampled("bg_color")
+      return value
 
 
 @dataclasses.dataclass()

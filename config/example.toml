@@ -4,7 +4,7 @@
 sampler = 'blockies.blocky_bias.BlockySampler'
 
 # Save dataset to this directory.
-output_dir = '/data/blockies_datasets/blockies/debugging'
+output_dir = '/home/timo/data/blockies_datasets/blockies/debugging'
 
 # Should be an existing output_dir be overwritten? [Default: false]
 force_overwrite = true
@@ -37,7 +37,7 @@ n_samples = 2
 sampler = 'blockies.blocky_bias.BlockyHighVarSampler'
 
 # Save dataset to this directory.
-output_dir = '/data/blockies_datasets/blockies/debugging_highvar'
+output_dir = '/home/timo/data/blockies_datasets/blockies/debugging_highvar'
 
 # Should be an existing output_dir be overwritten? [Default: false]
 force_overwrite = true

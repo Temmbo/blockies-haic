@@ -17,7 +17,9 @@ from blockies import utils
 
 OBJ_NAME_TO_INT = {
     "healthy": 0,
-    "ocd": 1,
+    "overbending": 1,
+    "bone_degen": 2,
+    "weak_spine": 3
 }
 """Mapping from SceneParameters.obj_name to an integer. Please use this
 encoding convention if you train a binary classifier."""
@@ -46,7 +48,7 @@ class SceneParameters:
     subclass.
 
     Attrs:
-        obj_name: Object name (either ``"healthy"`` or ``"ocd"``).
+        obj_name: Object name (either ``"healthy"``, `"overbending"``, ``"bone_degen"`` or ``"weak_spine"``).
         labeling_error: If ``True``, the ``obj_name_with_label_error``, will
             return the flipped obj_name. The ``obj_name`` attribute itself will
             not change.
@@ -163,7 +165,7 @@ class SceneParameters:
         "sec_bones": set(("001", "010", "100", "011", "101", "110", "111")),
         "arm_position": (0.0, 1.0),
         "bending": (-math.pi / 8, math.pi / 8),
-        "obj_name": set(["healthy", "ocd"]),
+        "obj_name": set(["healthy", "overbending", "bone_degen", "weak_spine"]),
         "labeling_error": set([False, True]),
         "obj_rotation_roll": (-math.pi / 3, math.pi / 3),
         "obj_rotation_pitch": (-math.pi / 3, math.pi / 3),
@@ -186,7 +188,49 @@ class SceneParameters:
         params = cls()
         params.obj_name = "ocd"
         params.num_ill_chars = 3
-        params.ill_chars = ["strong_bend", "strong_sphere_diff", "stretchy"]
+        params.ill_chars = ["high_bend", "high_sphere_diff", "stretchy"]
+        params.bending = 0.3
+        params.main_spherical = 0.85
+        params.sec_spherical = 0.3
+        params.sec_bones = "111"  # one secondary bone
+        params.arm_position = 0.9
+        return params
+
+    @classmethod
+    def default_overbending(cls) -> SceneParameters:
+        """Creates SceneParameters with default values for a Blocky with OCDegen."""
+        params = cls()
+        params.obj_name = "overbending"
+        params.num_ill_chars = 3
+        params.ill_chars = ["high_bend", "stretchy"]
+        params.bending = 0.3
+        params.main_spherical = 0.85
+        params.sec_spherical = 0.3
+        params.sec_bones = "111"  # one secondary bone
+        params.arm_position = 0.9
+        return params
+
+    @classmethod
+    def default_bone_degen(cls) -> SceneParameters:
+        """Creates SceneParameters with default values for a Blocky with OCDegen."""
+        params = cls()
+        params.obj_name = "bone_degen"
+        params.num_ill_chars = 3
+        params.ill_chars = ["mutation_mainbones", "high_sphere_diff"]
+        params.bending = 0.3
+        params.main_spherical = 0.85
+        params.sec_spherical = 0.3
+        params.sec_bones = "111"  # one secondary bone
+        params.arm_position = 0.9
+        return params
+
+    @classmethod
+    def default_weak_spine(cls) -> SceneParameters:
+        """Creates SceneParameters with default values for a Blocky with OCDegen."""
+        params = cls()
+        params.obj_name = "weak_spine"
+        params.num_ill_chars = 3
+        params.ill_chars = ["high_bend", "mutation_mainbones"]
         params.bending = 0.3
         params.main_spherical = 0.85
         params.sec_spherical = 0.3
@@ -372,8 +416,10 @@ class SceneParameters:
     def obj_name_with_label_error(self) -> str:
         """Returns the object name taking into account the label error."""
         flip_obj_name = {
-            "healthy": "ocd",
-            "ocd": "healthy",
+            "healthy": "bone_degen",
+            "bone_degen": "weak_spine",
+            "weak_spine": "overbending",
+            "overbending": "healthy",
         }
         return {False: self.obj_name, True: flip_obj_name[self.obj_name]}[
             self.labeling_error
@@ -404,5 +450,7 @@ def split_healthy_ocd(
     """
     return (
         [p for p in params if p.obj_name == "healthy"][:num_samples],
-        [p for p in params if p.obj_name == "ocd"][:num_samples],
+        [p for p in params if p.obj_name == "overbending"][:num_samples],
+        [p for p in params if p.obj_name == "bone_degen"][:num_samples],
+        [p for p in params if p.obj_name == "weak_spine"][:num_samples],
     )
